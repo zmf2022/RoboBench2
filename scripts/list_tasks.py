@@ -6,7 +6,7 @@
 import os
 import sys
 
-TASK_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "robolab", "tasks", "benchmark")
+TASK_DIR = os.path.join(os.path.dirname(__file__), "..", "robolab", "tasks", "benchmark")
 
 
 def main():
