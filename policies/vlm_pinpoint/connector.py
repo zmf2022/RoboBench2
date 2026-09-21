@@ -20,9 +20,21 @@ from __future__ import annotations
 
 import numpy as np
 
-# Franka flange origin to the fingertip, along the gripper's local +z. The controller
-# aims the fingertip, not the flange; without this the arm stops a hand's width short.
-FLANGE_TO_FINGERTIP_M = 0.1034
+# base_link (the Robotiq 2F-85 mount flange, which is what the `ee_pos`/`ee_quat`
+# proprio terms report) -> fingertip midpoint, expressed in base_link's own frame.
+# Mirrors the measured value the rest of the repo grades against,
+# robolab/eval/phases.py::TCP_OFFSET; duplicated rather than imported so this
+# connector stays importable without Isaac.
+#
+# The axis matters more than the magnitude. This was (0, 0, 0.1034) -- the Franka
+# *panda_hand* TCP offset, borrowed from the wrong robot: `ee_pos` here is the
+# Robotiq base_link, whose fingers run along +X, not +Z. The resulting tip estimate
+# was 18.5 cm off in a fixed direction, so the servo converged with the real fingers
+# ~15 cm high and ~10 cm to the side of whatever the model pointed at -- an arm that
+# descends but never arrives. Cross-check: wrist_cam is mounted on base_link looking
+# along +X (cos 0.93 with this vector, 0.31 with +Z), and a wrist camera looks at the
+# fingers.
+FLANGE_TO_FINGERTIP = (0.15, 0.03, 0.0)
 
 
 def quat_rotate(quat_wxyz, vec) -> np.ndarray:
@@ -38,7 +50,7 @@ def quat_rotate(quat_wxyz, vec) -> np.ndarray:
 def fingertip_position(ee_pos, ee_quat_wxyz) -> np.ndarray:
     """Where the fingers actually are, given the recorded flange pose."""
     return np.asarray(ee_pos, dtype=float) + quat_rotate(
-        ee_quat_wxyz, (0.0, 0.0, FLANGE_TO_FINGERTIP_M)
+        ee_quat_wxyz, FLANGE_TO_FINGERTIP
     )
 
 

@@ -127,12 +127,10 @@ class DroidCfg:
             ),
             "gripper": ImplicitActuatorCfg(
                 joint_names_expr=["finger_joint"],
-                stiffness=None,
-                damping=None,
-                # effort_limit=150.0,
+                stiffness=1000.0,
+                damping=40.0,
+                effort_limit=150.0,
                 velocity_limit=5.0, #2.175,
-                # stiffness=1000.0,
-                # damping=40.0,
             ),
         },
     )
