@@ -35,9 +35,9 @@ class VideoWriter:
         video_path: str,
         fps: int | float,
         *,
-        crf: int = 30,
+        crf: int = 20,
         preset: str = "veryfast",
-        max_width: int | None = 960,
+        max_width: int | None = None,
     ):
         """Initialize video writer.
 
