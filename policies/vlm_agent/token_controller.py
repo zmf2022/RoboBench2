@@ -102,16 +102,49 @@ TOKEN_VOCAB = (
 ORIENT_HOLD_GAIN = 1.0
 ORIENT_HOLD_MAX_RAD = 0.15
 
-# base_link (the Robotiq 2F-85 mount flange, the body the IK tracks) to the fingertip
-# plane, along the gripper's local +z. 162.8 mm per the Robotiq spec — the same number
-# quoted in ``DroidRelIKActionCfg``'s commented-out ``body_offset``. The IK aims the
-# flange; the VLM has to reason about where the FINGERS are, so reported state is
-# corrected by this. (Compare ``policies/vlm_pinpoint/connector.py``, which carries the
-# Panda hand's 0.1034 m for the same reason.)
-FLANGE_TO_FINGERTIP_M = 0.1628
+# base_link (the Robotiq 2F-85 mount flange, the body ``ee_pos``/``ee_quat`` report and
+# the IK aims) -> THE POINT THE CLOSED JAWS MEET, in base_link's own frame. The IK aims
+# the flange; the VLM has to reason about where its grasp lands, so reported state is
+# corrected by this.
+#
+# Two wrong values preceded this one, and both produced the same symptom — an arm that
+# descends forever and never arrives, with the object never between the jaws:
+#
+#   (0, 0, 0.1628)   a scalar along local +z, off the Robotiq spec sheet without checking
+#                    which way base_link's z points. The fingers run along +X, so the
+#                    estimate was ~22 cm off in a fixed direction.
+#   (0.15, 0.03, 0)  ``robolab/eval/phases.py::TCP_OFFSET``. Right axis, wrong point: that
+#                    is the *fingertip midpoint* the repo GRADES contact against, and it
+#                    sits 36 mm from where a grasp actually closes — 30 mm off the jaw
+#                    CENTRELINE (so the aim point lands beside the jaws, not between them)
+#                    and 19 mm past the pad face, at the pads' far tip.
+#
+# Grading a contact and aiming a grasp are not the same point. This one is the grasp
+# centre, and three independent derivations agree on it:
+#   * PharmFlow's measured DROID contract, ``arena/biomedical_contract.py::
+#     DROID_BASE_TO_CLOSED_GRASP_CENTER`` = (0.13108637, 0.00014421, 0.0);
+#   * this rig live, from the pad colliders (``robolab/eval/tows.py::PAD_BOX``, an FK
+#     validated to 0.00 mm against recorded finger poses) = (0.1301, 0.0, 0.0);
+#   * the collider itself: the two pads are symmetric about base_link's y=0, so the
+#     centreline y is exactly 0 by construction.
+# ``offline_tests/test_vlm_agent_geometry.py`` pins it against the first and the third.
+#
+# The axis is still +X, cross-checked by ``tests/test_pointing_backend.py::
+# test_fingertip_offset_points_where_the_wrist_camera_looks``: wrist_cam is bolted to
+# base_link to watch the fingers and its optical axis is 21 deg off this vector (cos
+# 0.93) versus 72 deg off +Z.
+FLANGE_TO_FINGERTIP = (0.13108637, 0.0, 0.0)
+
+# Fraction of the commanded translation relative IK actually achieves, measured on
+# BananaInBowlTask (see this module's docstring). Used only to tell the model how far one
+# decision really travels; the action itself is unaffected.
+REL_IK_ACHIEVED_FRACTION = 0.28
 
 # The gripper's approach axis in its own frame, and the world direction "straight down".
-_APPROACH_AXIS_LOCAL = (0.0, 0.0, 1.0)
+# +X, for the same reason FLANGE_TO_FINGERTIP is: the jaws close around a line running
+# out of base_link's +X. With the old (0, 0, 1) this reported ~90 deg of "tilt" on a
+# gripper that was pointing perfectly straight down, because it measured the wrong axis.
+_APPROACH_AXIS_LOCAL = (1.0, 0.0, 0.0)
 _STRAIGHT_DOWN = np.array([0.0, 0.0, -1.0])
 
 
@@ -157,7 +190,7 @@ def yaw_reference(quat_ref_wxyz, yaw_rad: float) -> np.ndarray:
 
 def fingertip_position(ee_pos, ee_quat_wxyz) -> np.ndarray:
     """Where the fingers are, given the flange pose the IK reports."""
-    offset = quat_rotate(ee_quat_wxyz, (0.0, 0.0, FLANGE_TO_FINGERTIP_M))
+    offset = quat_rotate(ee_quat_wxyz, FLANGE_TO_FINGERTIP)
     return np.asarray(ee_pos, dtype=np.float64).ravel()[:3] + offset
 
 
@@ -279,7 +312,7 @@ def image_to_data_url(
     return f"data:{'image/png' if fmt == 'PNG' else 'image/jpeg'};base64,{b64}"
 
 
-def format_state(state: dict, gripper_cmd: float) -> str:
+def format_state(state: dict, gripper_cmd: float, *, travel_cm: float | None = None) -> str:
     """The text block the VLM reads. Reports the COMMANDED gripper, not the measured one.
 
     Showing the measured value invites the model to re-issue GRASP while the fingers are
@@ -289,6 +322,18 @@ def format_state(state: dict, gripper_cmd: float) -> str:
     if "tip_pos" in state:
         tip = state["tip_pos"]
         lines.append(f"Fingertip position (base frame, m): x={tip[0]:.3f} y={tip[1]:.3f} z={tip[2]:.3f}")
+        # z IS the height above the table: the base frame's z=0 is the table surface
+        # (policies/vlm_pinpoint/client.py reports the same number as "cm above the
+        # table"). Without saying so, "z=0.47" is a number the model cannot act on —
+        # it reads it as "still high" and has no way to know that is 23 descents away.
+        lines.append(
+            f"Fingertip height ABOVE THE TABLE: {tip[2] * 100:.0f} cm "
+            f"(table surface is z=0; grasp height is ~2 cm)")
+        if travel_cm:
+            lines.append(
+                f"One MV_ unit moves about {travel_cm:.0f} cm, so reaching the table "
+                f"from here takes about {max(0.0, tip[2] * 100 - 2.0) / travel_cm:.0f} "
+                "more MV_DOWN decisions.")
     elif "ee_pos" in state:
         ee = state["ee_pos"]
         lines.append(f"Flange position (base frame, m): x={ee[0]:.3f} y={ee[1]:.3f} z={ee[2]:.3f}")
@@ -423,6 +468,17 @@ class TokenController:
     # ------------------------------------------------------------------
 
     @property
+    def travel_cm(self) -> float:
+        """Physical centimetres one decision actually buys.
+
+        ``step_m`` is the COMMANDED total; relative IK delivers ~28% of it (see this
+        module's docstring). The model is told this number so that "45 cm above the
+        table" converts into a countable number of decisions instead of a vague
+        "still high".
+        """
+        return self.step_m * REL_IK_ACHIEVED_FRACTION * 100.0
+
+    @property
     def per_step_m(self) -> float:
         """Metres commanded per control step so one decision totals ``step_m``."""
         return self.step_m / self.control_steps
@@ -508,9 +564,11 @@ class TokenController:
         if wrist:
             lines.append(
                 f"- {wrist}: mounted on the gripper, with the black fingertips entering "
-                "from the top of the frame. Your primary guide once the target is in it, "
-                "and the only view that can tell you whether the object is actually "
-                "between the fingers."
+                "from the top of the frame. Table objects appear NEAR THE TOP too, level "
+                "with the fingertips or just past them; the lower half of the frame is "
+                "usually bare table. Your guide for left/right once the target is in it. "
+                "It cannot see straight down between the fingers, so it cannot tell you "
+                "how high you are — read that off the state block."
             )
         lines += [
             "",
@@ -521,7 +579,9 @@ class TokenController:
             lines += [
                 f"When the target is visible in {wrist}, use it for left/right and grasp:",
                 "- target left of the fingers -> MV_LEFT ; right of the fingers -> MV_RIGHT",
-                "- target roughly centred between the fingers -> MV_DOWN",
+                "- target centred LEFT/RIGHT between the fingers -> MV_DOWN (this view "
+                "settles left/right only; it cannot see the gap under the fingers, so it "
+                "can never tell you that you are low enough)",
                 f"Do NOT judge forward/backward from up/down position in {wrist}: this "
                 "camera looks back along the arm, so +X/-X shows as size change, not "
                 "vertical motion. For MV_FWD/MV_BACK judge from "
@@ -545,21 +605,46 @@ class TokenController:
             "MV_UP when you need to lift the grasped object, when you are too low to reach "
             "over an obstacle, or when retreating after RELEASE.",
             "",
-            "DEPTH. The agent view can lie about distance: looking close there may just be "
-            "occlusion or a high viewpoint.",
-            "- Target hidden by the gripper, cropped by the frame edge, or filling too much "
-            "of the wrist view -> MV_BACK to regain sight before anything else.",
-            "- Depth beats appearance: if the wrist view is occluded or you have overshot, "
-            "use MV_BACK even right after MV_FWD.",
+            "DEPTH AND HEIGHT. The agent view can lie about distance: looking close there "
+            "may just be occlusion or a high viewpoint. The fingertip height in the state "
+            "block is the number to trust.",
+            # The wrist camera sits behind and above the fingers, so a target you are
+            # lined up with is NECESSARILY at the top of the frame, partly occluded. The
+            # rule this replaces ordered MV_BACK on exactly that condition, which turned
+            # the success state into a retreat trigger: measured 11 of 20 decisions were
+            # MV_BACK, and the arm orbited the banana for a whole episode without
+            # descending (z went 0.47 -> 0.43 in 160 control steps).
+            "- The wrist camera is bolted to the flange and looks out ALONG the jaw "
+            "axis, with the fingertips 15 cm ahead of it, so a target you are "
+            "correctly lined up with SITS AT THE TOP OF THE WRIST VIEW, partly behind the "
+            "fingertips. That is what being aligned LOOKS like, not a lost target: answer "
+            "it with MV_DOWN. Never answer it with MV_BACK.",
+            "- MV_BACK is only for a real overshoot: the target has grown large and fills "
+            "much of the wrist view, or the agent view shows the gripper has travelled "
+            "past it. Backing off merely because the fingers cover the target undoes the "
+            "approach you just made and you will arrive at the same picture again.",
+            # A hard "do not refine above 10 cm" gate was tried here and is worse: the
+            # model saw the banana sitting right of the fingers for eight consecutive
+            # decisions, was forbidden to act on it, and the offset grew until the
+            # target left the wrist view entirely at 19 cm. Lateral error does not
+            # shrink on its own, and every centimetre of descent makes it harder to see.
+            "- Descent is the DEFAULT, not a phase. Descend on every decision that has no "
+            "clearly visible lateral offset to fix; when you can see the target sitting "
+            "off the finger centre, correct that first, then resume descending. Do not "
+            "bank a visible offset for later, and do not stop descending to re-examine a "
+            "target you can already see.",
+            "- A run of MV_DOWN from the start pose is expected — the state block says how "
+            "many are left. It is a stuck loop only if the height stops falling.",
             "- From high above the table a far-looking target is usually an x overshoot: "
             "MV_DOWN first rather than repeating MV_FWD.",
-            "- Align x/y before descending in z; after a grasp, MV_UP clear of the table "
-            "before any x/y move.",
+            "- After a grasp, MV_UP clear of the table before any x/y move.",
             "",
             "GRIPPER.",
-            "- GRASP only when BOTH views confirm the grasp point is clearly between the "
-            "centre of the two fingers and low enough to enclose it. A GRASP is held long "
-            "enough for the fingers to close, so do not repeat it while it is already CLOSED.",
+            "- GRASP only when the grasp point is between the centre of the two fingers "
+            "AND the fingertips are within about 3 cm of the table. Height is the binding "
+            "condition: a picture that looks aligned from 20 cm up is still 20 cm up. A "
+            "GRASP is held long enough for the fingers to close, so do not repeat it "
+            "while it is already CLOSED.",
             "- RELEASE only when the held object is above its destination and lowered onto it.",
             "",
             "ROTATE_CW / ROTATE_CCW turn the gripper as seen in the wrist view. Use them only "
@@ -577,16 +662,18 @@ class TokenController:
             # must think in the visible reply instead. One short sentence is allowed
             # before the decision lines; the parser takes the LAST markers, so prose
             # cannot hijack the decision.
-            "Do not repeat a direction that contradicts your most recent units — if the "
-            "offset has not closed, the cause is usually the other axis, not more of the same.",
+            "Do not answer a unit with its OPPOSITE on the next decision (MV_FWD then "
+            "MV_BACK, MV_LEFT then MV_RIGHT): that is an oscillation and it cancels your "
+            "own progress. Repeating the SAME unit many times is fine and often correct — "
+            "a long descent is repetition, not oscillation.",
             "",
             # WRIST: YES/NO is Show-Harness's shared wrist-visibility marker
             # (core/prompting/wrist_marker.py). Making the A/B branch an explicit,
             # parseable statement rather than an implicit one both improves the choice and
             # gives the log a signal for which view the model thought it was steering by.
-            f"Work out the offset in {primary} in your reasoning. You may think in ONE "
-            "short sentence first, then give exactly these two final lines and "
-            "nothing else:",
+            "Work out the offset in whichever view the DIRECTION rules above put you in "
+            "charge of for this decision. You may think in ONE short sentence first, then "
+            "give exactly these two final lines and nothing else:",
             "WRIST: <YES if the target is in the wrist view, else NO>",
             "ACTION: <UNIT>",
         ]
@@ -599,32 +686,35 @@ class TokenController:
         gripper_cmd: float,
         recent: list[str] | None = None,
     ) -> list[dict]:
-        """OpenAI chat messages: images (fixed order) + grounded rules + state + history.
+        """OpenAI chat messages: stable text first, fresh state, images last.
 
-        Mirrors Show-Harness's ``vlm_client`` contract: images come first with NO
-        per-image text labels — agentview, then any extra views (wrist last) — and
-        all text goes last. View identity comes from the fixed order plus the
+        Layout is prefix-cache friendly: the vLLM server reuses KV for the
+        shared token prefix, so stable content (task, growing history) comes
+        before per-step content (live state, fresh frames). History is
+        append-only within an episode for the same reason — a sliding window
+        would shift every token and defeat the cache. Mirrors Show-Harness's
+        imagelabel-free contract otherwise: agentview, then any extra views
+        (wrist last). View identity comes from the fixed order plus the
         system prompt's view descriptions (wrist = the one with fingertips).
         """
         views = obs.get("views") or []
         labels = [label for label, _ in views]
 
-        content: list[dict] = []
+        history = ", ".join(recent) if recent else "none"
+        content: list[dict] = [
+            {"type": "text",
+             "text": (
+                 f"Task: {obs.get('instruction', '')}\n\n"
+                 f"Your last units with measured outcome (oldest first): {history}\n\n"
+                 f"Robot state:\n"
+                 f"{format_state(obs.get('state', {}), gripper_cmd, travel_cm=self.travel_cm)}\n\n"
+                 "Reply with at most one thinking sentence, then exactly two lines: WRIST: <YES|NO> then ACTION: <UNIT>"
+             )},
+        ]
         for _, image in views:
             content.append(
                 {"type": "image_url", "image_url": {"url": image_to_data_url(image)}}
             )
-
-        history = ", ".join(recent) if recent else "none"
-        content.append({
-            "type": "text",
-            "text": (
-                f"Task: {obs.get('instruction', '')}\n\n"
-                f"Robot state:\n{format_state(obs.get('state', {}), gripper_cmd)}\n\n"
-                f"Your last units (oldest first): {history}\n\n"
-                "Reply with at most one thinking sentence, then exactly two lines: WRIST: <YES|NO> then ACTION: <UNIT>"
-            ),
-        })
 
         return [
             {"role": "system", "content": self.system_prompt(labels)},

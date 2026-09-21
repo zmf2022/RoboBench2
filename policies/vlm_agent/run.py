@@ -21,6 +21,14 @@ parser.add_argument("--model", default=None,
 parser.add_argument("--mode", choices=["token", "tool"], default="token",
                     help=("Control mode: 'token' for discrete action units, 'tool' for "
                           "function calling (default: token)."))
+parser.add_argument("--backend", choices=["vllm", "claude"], default="vllm",
+                    help=("VLM backend: 'vllm' for an OpenAI-compatible server at "
+                          "--vlm-url, 'claude' for the local Claude Code CLI "
+                          "(no server needed, billed per call; slow, use for "
+                          "planning/diagnosis, not real-time control)."))
+parser.add_argument("--effort", default="high",
+                    help="Thinking effort for --backend claude "
+                         "(low|medium|high|xhigh|max, default: high).")
 parser.add_argument("--request-timeout", "--request_timeout", type=float, default=120.0,
                     help="Per-request timeout in seconds (default: 120).")
 parser.add_argument("--step-m", "--step_m", type=float, default=None,
@@ -87,9 +95,15 @@ IK_SCALE = args_cli.ik_scale if args_cli.ik_scale is not None else float(DroidRe
 
 
 def make_client(args: argparse.Namespace) -> VLMInferenceClient:
-    backend = VLMBackend(base_url=args.vlm_url, model=args.model, timeout=args.request_timeout)
-    print(f"\033[96m[VLMAgent] Waiting for the VLM server at {args.vlm_url}...\033[0m")
-    backend.wait_for_server(timeout=120.0)
+    if args.backend == "claude":
+        from policies.vlm_agent.claude_backend import ClaudeCliBackend
+        backend = ClaudeCliBackend(model=args.model, timeout=args.request_timeout,
+                                   effort=args.effort)
+        print("\033[96m[VLMAgent] backend=claude (local CLI, billed per call)\033[0m")
+    else:
+        backend = VLMBackend(base_url=args.vlm_url, model=args.model, timeout=args.request_timeout)
+        print(f"\033[96m[VLMAgent] Waiting for the VLM server at {args.vlm_url}...\033[0m")
+        backend.wait_for_server(timeout=120.0)
 
     controller_cls = ToolController if args.mode == "tool" else TokenController
     controller = controller_cls(
@@ -101,7 +115,7 @@ def make_client(args: argparse.Namespace) -> VLMInferenceClient:
         f"\033[96m[VLMAgent] model={backend.model} mode={args.mode} "
         f"ik_scale={controller.ik_scale} step_m={controller.step_m} "
         f"control_steps={controller.control_steps} "
-        f"(~{controller.step_m * 0.28 * 1000:.0f} mm physical per decision)\033[0m"
+        f"(~{controller.travel_cm * 10:.0f} mm physical per decision)\033[0m"
     )
     return VLMInferenceClient(backend=backend, controller=controller, mode=args.mode)
 

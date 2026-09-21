@@ -24,6 +24,15 @@ python policies/vlm_agent/run.py --task BananaInBowlTask --mode token --visualiz
 # Tool mode
 python policies/vlm_agent/run.py --task BananaInBowlTask --mode tool --visualizer kit
 
+# Claude Code CLI backend (no vLLM server needed; needs `claude` login.
+# Billed per call and slow — for planning/diagnosis, not real-time control.
+# Frames go over stdin as stream-json image blocks; the session runs with no
+# tools and a replaced system prompt, so each decision is a one-shot vision
+# call (~700 input tokens) rather than a full agent session (~34k).
+# Model defaults to claude-opus-5, thinking effort to high; override with
+# --model sonnet --effort medium)
+python policies/vlm_agent/run.py --task BananaInBowlTask --mode tool --backend claude --model claude-opus-5 --effort high --visualizer kit
+
 # Multiple envs
 python policies/vlm_agent/run.py --task BananaInBowlTask --num-envs 4
 
@@ -53,6 +62,7 @@ python examples/run_rel_ik_demo.py --task BananaInBowlTask --delta 0.018
 | `--vlm-url` | `http://localhost:8000/v1` | VLM API endpoint |
 | `--model` | auto | Model name (auto-detected) |
 | `--mode` | `token` | `token` or `tool` |
+| `--backend` | `vllm` | `vllm` or `claude` (local CLI, needs login) |
 | `--task` | None | Task name(s) |
 | `--num-envs` | 1 | Number of parallel envs |
 | `--num-runs` | 1 | Runs per task |

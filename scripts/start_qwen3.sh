@@ -84,6 +84,7 @@ echo "============================================================"
 exec vllm serve "${MODEL}" \
     --served-model-name "${SERVED_NAME}" \
     --tensor-parallel-size 1 \
+    --enable-prefix-caching \
     --max-model-len "${MAX_MODEL_LEN}" \
     --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}" \
     --kv-cache-dtype fp8 \

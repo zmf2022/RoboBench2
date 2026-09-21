@@ -60,10 +60,6 @@ from policies.vlm_agent.token_controller import (
 
 logger = logging.getLogger(__name__)
 
-# How many past decisions to show the model. Enough to notice it is oscillating between
-# two opposite units, short enough not to crowd the images out of the context.
-HISTORY_LEN = 6
-
 # Consecutive per-env query/parse failures tolerated before giving up. A single malformed
 # reply must not kill a sweep that has already banked episodes, but a server that is down
 # should not burn a whole 1350-step episode issuing hold actions either.
@@ -134,6 +130,7 @@ class _EnvState:
     gripper_cmd: float = GRIPPER_OPEN
     quat_ref: np.ndarray | None = None
     recent: list[str] = field(default_factory=list)
+    prev_tip: list | None = None
     finished: bool = False
     failures: int = 0
     settle_left: int = SETTLE_STEPS
@@ -156,6 +153,12 @@ class VLMInferenceClient(InferenceClient):
     def begin_episode(self, episode_idx: int) -> None:
         super().begin_episode(episode_idx)
         self._envs.clear()
+        # Backends that keep a conversation across decisions (the Claude CLI) must not
+        # carry one episode's frames into the next: the scene has been reset underneath
+        # them, so every remembered image is now a lie about the current layout.
+        starter = getattr(self.backend, "new_session", None)
+        if callable(starter):
+            starter()
 
     def reset(self, *, env_id: int | None = None) -> None:
         if env_id is None:
@@ -223,7 +226,7 @@ class VLMInferenceClient(InferenceClient):
         state.plan = self.controller.decide(RELEASE_UNIT)
         state.steps_left = state.plan.steps
         state.gripper_cmd = GRIPPER_OPEN
-        state.recent = (state.recent + ["RELEASE(auto)"])[-HISTORY_LEN:]
+        state.recent = state.recent + ["RELEASE(auto)"]  # append-only: prefix cache reuses the growing history
         return True
 
     def _plan_next(self, state: _EnvState, extracted: dict, instruction: str, *, env_id: int) -> None:
@@ -234,6 +237,25 @@ class VLMInferenceClient(InferenceClient):
         we retry with the vocabulary pinned. Pinning it up front is what a naive
         ``guided_choice`` does, and it forbids the reasoning the choice depends on.
         """
+        # Close out the previous decision with what it physically achieved, so the
+        # history reads "MV_LEFT(Δ18mm)" instead of a bare token: the CLI backend
+        # keeps full turns in-session, and this is the stateless equivalent.
+        tip_now = extracted.get("state", {}).get("tip_pos")
+        if state.prev_tip is not None and state.recent and tip_now is not None:
+            try:
+                moved = float(np.linalg.norm(
+                    np.asarray(tip_now, dtype=float).ravel()[:3]
+                    - np.asarray(state.prev_tip, dtype=float).ravel()[:3]) * 1000)
+                if not state.recent[-1].endswith(")"):
+                    state.recent[-1] = f"{state.recent[-1]}(Δ{moved:.0f}mm)"
+            except (TypeError, ValueError):
+                pass
+        if tip_now is not None:
+            try:
+                state.prev_tip = [float(v) for v in
+                                  np.asarray(tip_now, dtype=float).ravel()[:3]]
+            except (TypeError, ValueError):
+                state.prev_tip = None
         try:
             try:
                 decision = self._decide(extracted, instruction, state, constrain=False)
@@ -261,7 +283,7 @@ class VLMInferenceClient(InferenceClient):
         state.failures = 0
         state.plan = decision
         state.steps_left = decision.steps
-        state.recent = (state.recent + [decision.unit])[-HISTORY_LEN:]
+        state.recent = state.recent + [decision.unit]  # append-only, see above
 
         if decision.gripper is not None:
             state.gripper_cmd = float(decision.gripper)

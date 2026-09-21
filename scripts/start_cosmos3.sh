@@ -88,6 +88,7 @@ echo "============================================================"
 exec vllm serve "${MODEL}" \
     --served-model-name "${SERVED_NAME}" \
     --tensor-parallel-size 1 \
+    --enable-prefix-caching \
     --mm-encoder-tp-mode data \
     --async-scheduling \
     --max-model-len "${MAX_MODEL_LEN}" \

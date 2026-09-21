@@ -337,7 +337,70 @@ def eef_quat(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg(
 # Actions
 ########################################################
 
+#: Rate the gripper's position target is allowed to move, in rad/s. Both bounds matter
+#: and both were measured on this gripper (PharmFlow, over 2000 grasps; see
+#: ``pharm_flow/rl/actions.py`` and ``docs/gomp_rl.md`` §5):
+#:
+#: * TOO FAST is the default with no ramp at all. The native binary term steps the target
+#:   between 0 and pi/4 in ONE control step, and this Robotiq's authored master drive is
+#:   very stiff and lightly damped (stiffness 1000, damping 40), so the step produces a
+#:   several-hundred-rad/s finger spike. Measured here on BananaInBowlTask: the jaws close
+#:   on a banana resting 2.1 cm above the table and LAUNCH it to 96 cm. The policy then
+#:   correctly reports an empty gripper and reopens -- the grasp never existed.
+#: * TOO SLOW is its own failure. A slow ramp lets the passive 2F-85 mimic chain land its
+#:   two pads asymmetrically; one pad arrives first and the object rolls out ahead of the
+#:   other. Measured: 1.2-3 % penetration at 2.0 rad/s, exactly zero from 3.0 rad/s up.
+#:
+#: 6.0 is the value PharmFlow ships: above the 3.0 floor with 2x margin, far below a step.
+GRIPPER_TARGET_SLEW_RAD_S = 6.0
+
+
 class BinaryJointPositionZeroToOneAction(BinaryJointPositionAction):
+    """Binary open/close with a bounded slew on the joint position target.
+
+    The binary contract the policies drive is unchanged -- ``> 0.5`` closes. What changes
+    is that the target is walked toward the commanded limit at
+    ``cfg.max_target_velocity`` rather than teleported to it; see that constant for the
+    two measured failure modes on either side of the rate.
+    """
+
+    def __init__(self, cfg, env) -> None:
+        super().__init__(cfg, env)
+        self._ramped_target = torch.zeros_like(self._processed_actions)
+        # Seeded from the measured joint on the first sub-step after every reset, so the
+        # ramp starts where the fingers actually are rather than where the last episode
+        # left the target.
+        self._ramp_reset = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
+
+    def reset(self, env_ids=None) -> None:
+        super().reset(env_ids)
+        if env_ids is None:
+            self._ramp_reset[:] = True
+        else:
+            self._ramp_reset[env_ids] = True
+
+    def apply_actions(self):
+        rate = float(getattr(self.cfg, "max_target_velocity", GRIPPER_TARGET_SLEW_RAD_S))
+        if not np.isfinite(rate) or rate <= 0.0:
+            # An explicit opt-out restores the native step, for anything that needs to
+            # reproduce a run recorded before the ramp existed.
+            return super().apply_actions()
+        current = as_torch(self._asset.data.joint_pos)[:, self._joint_ids]
+        # Unconditional: branching on the mask reads a device scalar on the host, and
+        # apply_actions runs once per physics sub-step. torch.where is a no-op where the
+        # mask is clear.
+        self._ramped_target = torch.where(
+            self._ramp_reset.unsqueeze(-1), current, self._ramped_target
+        )
+        self._ramp_reset[:] = False
+        max_delta = rate * float(self._env.physics_dt)
+        self._ramped_target = self._ramped_target + torch.clamp(
+            self._processed_actions - self._ramped_target, min=-max_delta, max=max_delta
+        )
+        self._asset.set_joint_position_target_index(
+            target=self._ramped_target, joint_ids=self._joint_ids
+        )
+
     # override
     def process_actions(self, actions: torch.Tensor):
         # store the raw actions
@@ -369,6 +432,10 @@ class BinaryJointPositionZeroToOneActionCfg(BinaryJointPositionActionCfg):
     """
 
     class_type = BinaryJointPositionZeroToOneAction
+
+    max_target_velocity: float = GRIPPER_TARGET_SLEW_RAD_S
+    """Slew rate for the joint position target, rad/s. See
+    :data:`GRIPPER_TARGET_SLEW_RAD_S`; set to 0 to restore the native one-step jump."""
 @configclass
 class DroidJointPositionActionCfg:
     """Joint-space arm + gripper actions; no Cartesian frame (see docs/frames.md)."""

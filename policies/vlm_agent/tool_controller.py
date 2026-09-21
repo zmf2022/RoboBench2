@@ -31,6 +31,7 @@ from typing import Any
 import numpy as np
 
 from policies.vlm_agent.token_controller import (
+    REL_IK_ACHIEVED_FRACTION,
     DONE_UNIT,
     GIVE_UP_UNIT,
     GRASP_UNIT,
@@ -68,11 +69,17 @@ class ToolController(TokenController):
     def get_tool_schemas(self) -> list[dict]:
         bounds = (
             f"Axes are the robot base frame, in metres: +x away from the base, "
-            f"+y to the robot's left, +z up. yaw is in radians about +z, turning the "
-            f"gripper clockwise as seen in the wrist view when positive. "
+            f"+y to the robot's left, +z up. yaw is in radians about the base +z axis "
+            f"(right-hand rule). "
             f"Per call: |x|,|y|,|z| <= {MAX_MOVE_M:.3f} m and |yaw| <= {MAX_YAW_RAD:.2f} rad; "
             f"larger values are clipped to those bounds. Omitted dimensions do not move. "
-            f"A typical useful step is {STEP_M:.3f} m."
+            f"IMPORTANT: this controller achieves only about "
+            f"{REL_IK_ACHIEVED_FRACTION * 100:.0f}% of the displacement you request, so ask "
+            f"for about {1.0 / REL_IK_ACHIEVED_FRACTION:.1f}x the distance you actually want "
+            f"to travel: {STEP_M:.3f} m requested lands on about "
+            f"{STEP_M * REL_IK_ACHIEVED_FRACTION * 100:.0f} cm, and the maximum "
+            f"{MAX_MOVE_M:.3f} m lands on about "
+            f"{MAX_MOVE_M * REL_IK_ACHIEVED_FRACTION * 100:.0f} cm."
         )
         return [
             {
@@ -171,13 +178,19 @@ class ToolController(TokenController):
             )
         if wrist:
             lines.append(
-                f"- {wrist}: mounted on the gripper looking down the grasp axis. The only "
-                "view that shows whether the object is between the fingers."
+                f"- {wrist}: bolted to the flange and looking out ALONG the jaw axis, "
+                "with the fingertips about 15 cm ahead of it. What sits between the "
+                "fingers is what fills the middle of this view, so this is the view that "
+                "tells you whether the object is lined up to be grasped. The fingertips "
+                "enter from the top of the frame, so a target you are correctly centred "
+                "on sits high in the view, partly behind them. Take the remaining height "
+                "from the fingertip height in the state block, not from this view."
             )
         lines += [
             "",
-            "Approach in stages: line the gripper up above the target in x and y, lower it in "
-            "z until the wrist view shows the grasp point between the fingers, then grasp. "
+            "Approach in stages: line the gripper up above the target in x and y, lower it "
+            "in z until the fingertip height in the state block is within a few cm of the "
+            "table with the target still centred left/right, then grasp. "
             "Lift before translating a held object, and release only once it is over and "
             "lowered onto its destination.",
             "",
@@ -203,7 +216,8 @@ class ToolController(TokenController):
             "type": "text",
             "text": (
                 f"Task: {obs.get('instruction', '')}\n\n"
-                f"Robot state:\n{format_state(obs.get('state', {}), gripper_cmd)}\n\n"
+                f"Robot state:\n"
+                f"{format_state(obs.get('state', {}), gripper_cmd, travel_cm=self.travel_cm)}\n\n"
                 f"Your last calls (oldest first): {history}\n\n"
                 "Call one tool."
             ),

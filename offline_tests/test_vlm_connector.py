@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from policies.vlm_pinpoint.connector import (
-    FLANGE_TO_FINGERTIP_M,
+    FLANGE_TO_FINGERTIP,
     RoboLabPointingClient,
     fingertip_position,
     quat_rotate,
@@ -31,16 +31,17 @@ def test_half_turn_about_z_flips_x_and_y():
     assert np.allclose(quat_rotate((0, 0, 0, 1), (1, 0, 0)), (-1, 0, 0), atol=1e-9)
 
 
-def test_fingertip_sits_ahead_of_the_flange_along_local_z():
+def test_fingertip_sits_ahead_of_the_flange_along_local_x():
     tip = fingertip_position((0, 0, 0), (1, 0, 0, 0))
-    assert np.allclose(tip, (0, 0, FLANGE_TO_FINGERTIP_M))
+    assert np.allclose(tip, FLANGE_TO_FINGERTIP)
 
 
 def test_fingertip_follows_the_hand_orientation():
-    # rotated 90 deg about y: local +z now points along world +x
+    # rotated +90 deg about y: local +x now points along world -z (straight down)
     q = (np.cos(np.pi / 4), 0.0, np.sin(np.pi / 4), 0.0)
     tip = fingertip_position((1, 0, 0), q)
-    assert np.allclose(tip, (1 + FLANGE_TO_FINGERTIP_M, 0, 0), atol=1e-9)
+    dx, dy, _ = FLANGE_TO_FINGERTIP
+    assert np.allclose(tip, (1, dy, -dx), atol=1e-9)
 
 
 def test_observation_is_unbatched_for_the_requested_env():
@@ -49,7 +50,7 @@ def test_observation_is_unbatched_for_the_requested_env():
                       "ee_quat": np.array([[1.0, 0, 0, 0], [1.0, 0, 0, 0]])}}
     out = to_harness_observation(obs, env_id=1)
     assert out["scene"].shape == (4, 4, 3)
-    assert np.allclose(out["tip_pos"], (1.0, 0, FLANGE_TO_FINGERTIP_M))
+    assert np.allclose(out["tip_pos"], np.array([1.0, 0, 0]) + FLANGE_TO_FINGERTIP)
 
 
 def test_missing_channels_become_none_not_an_exception():
