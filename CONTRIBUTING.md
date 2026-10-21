@@ -15,7 +15,7 @@ A change to evaluation semantics is accepted here only with three things attache
    or a linked episode a reviewer can open), added to `docs/verified/findings.md`.
 2. **The change** — one commit titled `P<nn>: <what it does>`, a row in
    `docs/verified/changes.md` stating whether a score can move and the evidence, and an
-   offline test under `offline_tests/` (no simulator).
+   regression test under `tests/`.
 3. **The verification** — a recorded run on which `scripts/verify_patches.py` (or a human on a
    linked episode) shows the new behaviour *and* the old behaviour on the pre-change baseline.
    Until then the row is marked OFFLINE. An N/A is never a pass.

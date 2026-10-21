@@ -6,19 +6,15 @@ name = "robolab"
 version = "0.3.2+verified.1"
 description = "RoboLab Verified: NVIDIA RoboLab v0.3.2 with a verified evaluation harness"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.12,<3.13"
 license = {text = "Apache-2.0"}
 authors = [{name = "Xuning Yang"}]
 maintainers = [{name = "Manda Robotics"}]
 
 dependencies = [
     # Core
-    # IsaacLab + IsaacSim are NOT pinned here: they are mutually-exclusive,
-    # version-specific stacks selected via the `isaac50` / `isaac51` / `isaac60` extras
-    # below (see [tool.uv].conflicts). Install with e.g.
-    #   uv sync --extra isaac50   # IsaacLab 2.2.0 / IsaacSim 5.0.0
-    #   uv sync --extra isaac51   # IsaacLab 2.3.2.post1 / IsaacSim 5.1.0
-    #   uv sync --extra isaac60   # IsaacLab 3.0 beta / IsaacSim 6.0.1 (Python 3.12)
+    # The supported simulator stack is selected with `uv sync --extra isaac60`.
+    # Isaac Lab's isaacsim extra supplies the matching Isaac Sim 6.0.1 stack.
     "torch",
     "numpy",
     "gymnasium",
@@ -59,16 +55,7 @@ Upstream = "https://github.com/NVlabs/RoboLab"
 Changes = "https://github.com/Manda-Robotics/RoboLab-Verified/blob/main/docs/verified/changes.md"
 
 [project.optional-dependencies]
-# Mutually-exclusive IsaacLab/IsaacSim stacks. Exactly one must be selected at
-# install time; they are declared as conflicting under [tool.uv].
-isaac50 = [
-    "isaaclab==2.2.0",
-    "isaacsim[all,extscache]==5.0.0",
-]
-isaac51 = [
-    "isaaclab==2.3.2.post1",
-    "isaacsim[all,extscache]==5.1.0",
-]
+# Isaac Sim 6.0.1 / Isaac Lab 3.0 beta (Python 3.12).
 isaac60 = [
     # Isaac Lab 3's published wheel bundles isaaclab_physx, isaaclab_tasks,
     # isaaclab_visualizers, and the other Lab extensions. Its `isaacsim` extra
@@ -99,12 +86,6 @@ dashboard = ["templates/*.html", "static/*"]
 [tool.uv]
 prerelease = "allow"
 index-strategy = "unsafe-best-match"
-# The IsaacLab/IsaacSim stacks cannot be co-installed in one environment.
-conflicts = [
-    [{ extra = "isaac50" }, { extra = "isaac51" }],
-    [{ extra = "isaac50" }, { extra = "isaac60" }],
-    [{ extra = "isaac51" }, { extra = "isaac60" }],
-]
 # warp-lang 1.13.0.dev20260418 on pypi.nvidia.com only published the macOS
 # wheel — no Linux build — so any resolver pass that picked it would break
 # `uv sync` on Linux. Exclude that specific version.

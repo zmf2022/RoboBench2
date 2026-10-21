@@ -1,45 +1,6 @@
 # Docker
 
-## Prerequisites
-
-- Docker with NVIDIA Container Toolkit (`nvidia-docker2`)
-- Access to `nvcr.io/nvidia/isaac-lab:3.0.0-beta2` (Isaac Sim 6.0 / Isaac Lab 3.0 beta)
-- To push an image, set `ROBOLAB_REGISTRY` to an image repository you can write to (for example, `registry.example.com/team/robolab`). Local builds default to `robolab`.
-
-## Build
-
-```bash
-# Uses git short SHA as tag by default
-./docker/build_docker.sh
-
-# Older simulator stacks remain available
-./docker/build_docker.sh --isaac50
-./docker/build_docker.sh --isaac51
-
-# Custom tag
-./docker/build_docker.sh my-tag
-
-# Build and push to registry
-./docker/build_docker.sh --push
-
-# Custom tag and push
-./docker/build_docker.sh my-tag --push
-```
-
-The build context is the repo root. A `.dockerignore` at the repo root excludes
-`.git/`, build artifacts, and non-essential directories to keep the context small.
-Code and `assets/` are baked into the image. Each `assets/` subdirectory is a
-separate layer for better caching — code changes don't invalidate asset layers.
-
-## Run
-
-```bash
-# Interactive shell with display/GUI forwarding (X11, cache + repo mounts)
-./docker/run_docker.sh
-
-# Or specify a custom tag
-./docker/run_docker.sh my-tag
-```
+构建、启动及镜像推送见[主 README 的 Docker 章节](../README.md#docker)。本页保留直接调用 Docker 的示例和镜像内容说明。
 
 ### Running a single command
 
@@ -68,8 +29,8 @@ docker run --rm -it \
 
 ## What's in the image
 
-- **Base**: `nvcr.io/nvidia/isaac-lab:3.0.0-beta2` (Isaac Sim 6.0) by default; select the legacy stacks with `build_docker.sh --isaac50` or `--isaac51`
+- **Base**: `nvcr.io/nvidia/isaac-lab:3.0.0-beta2` (Isaac Sim 6.0)
 - **Code**: `robolab/`, `scripts/`, `examples/`, `tests/`
 - **Assets**: `assets/` (~6.5GB)
-- **Python packages**: Everything in `requirements.txt`, installed via `pip install -e .`
+- **Python packages**: Core dependencies from `pyproject.toml`, installed via `pip install -e .`; the base image supplies the simulator stack
 - **System tools**: `htop`, `nvtop`, `tmux`, `vim`, `git-lfs`, `zip`

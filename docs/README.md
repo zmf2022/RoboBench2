@@ -1,8 +1,19 @@
 # RoboLab Documentation
 
+## Getting started
+
+- [Environment installation](../README.md#installation) — project-local uv environments, assets and verification
+- [Astranomy setup](../README.md#astranomy) — Direct-API and Agentic backend navigation
+- [Isaac Sim 6 support](isaac_sim_6.md) — compatibility and validation evidence
+- [Script catalog](../scripts/README.md) — setup helpers, model servers and offline tools
+
+Documentation keeps the existing upstream file paths and directory layout.
+Backend-specific options remain in each policy README; shared installation steps live in
+[the main README](../README.md#installation). Historical Verified reports retain their original locations.
+
 ## RoboLab Verified
 
-This is the documentation of **RoboLab Verified**, a fork of NVIDIA RoboLab v0.3.1 that
+This is the documentation of **RoboLab Verified**, a fork of NVIDIA RoboLab (currently based on v0.3.2) that
 changes what the benchmark reports, not what it simulates. Start here if you are coming from
 upstream:
 

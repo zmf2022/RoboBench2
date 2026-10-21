@@ -1,7 +1,29 @@
 # Scripts
 
-Offline tools shipped with RoboLab Verified. None of them needs Isaac Sim; the ones marked
-`h5py` read recorded HDF5 trajectories, the ones marked `usd-core` read USD files.
+Repository helpers are grouped below by purpose. Run Python commands from the repository
+root with the project environment activated.
+
+## Environment setup
+
+`./scripts/setup_env.sh` installs Isaac Sim 6.0.1 with Python 3.12 in the project-local `.venv`.
+See [installation](../README.md#installation) for prerequisites, assets and checks.
+Use `--help` to inspect its options without installing anything.
+
+## Model servers
+
+| Script | Purpose |
+| --- | --- |
+| `install_openpi.sh`, `serve_pi05.sh` | Install OpenPI and serve the π0.5 joint-position checkpoint |
+| `start_cosmos3.sh`, `start_cosmos3_policy_server.py` | Launch the Cosmos3 policy server |
+| `start_qwen3.sh` | Launch the Qwen3 server |
+
+Backend-specific dependencies and usage belong in the [policy documentation](../policies/README.md).
+Astranomy launchers live under [`policies/ai_native/`](../policies/ai_native/README.md).
+
+## Offline evaluation and analysis
+
+The tools in this table do not need Isaac Sim. `h5py` tools read recorded HDF5 trajectories;
+`usd-core` tools inspect USD assets.
 
 | script | what it does | needs |
 |---|---|---|
@@ -23,7 +45,17 @@ Offline tools shipped with RoboLab Verified. None of them needs Isaac Sim; the o
 | `score_gold.py` | Scores the gold labels: annotator against annotator (H6) and the machine's segments against the consensus (H8); segment F1 at IoU 0.5, boundary recall at ±0.25 / 0.5 / 1 / 2 s, recall by duration. | h5py, torch (when it annotates on the fly) |
 | `read_subtask_status_from_hdf5.py` | Dump the per-step subtask status from a recording. | h5py |
 | `convert_to_lerobot.py` | Export recordings to the LeRobot format (upstream). | — |
-| `serve_pi05.sh`, `install_openpi.sh` | Serve π0.5 from the joint-position checkpoint; install the OpenPI server and client. | uv |
 
 Usage lines: `python scripts/<name>.py --help`. See [verification.md](../docs/verified/verification.md)
 for how these fit together.
+
+## Additional diagnostics
+
+- `list_tasks.py`, `preflight_tasks.py`: task inventory and static preflight checks.
+- `check_dense_channels.py`, `phase_mode_check.py`, `phase_sensitivity.py`,
+  `phase_stability.py`, `reflag_phases.py`: dense phase annotation diagnostics.
+- `h7_log_disagreement.py`, `policy_failure_taxonomy.py`: disagreement and failure analysis.
+- [`_shims/`](_shims/README.md): offline import shims used by tooling.
+
+Read each script's `--help` for its inputs and dependencies. Historical evidence is indexed in
+[verification](../docs/verified/verification.md).

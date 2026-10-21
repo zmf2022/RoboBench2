@@ -40,10 +40,6 @@ python policies/molmoact2/run.py --task BananaInBowlTask --task-dirs benchmark -
 | env action | 16-dim `[left arm 6, left fingers 2, right arm 6, right fingers 2]`; the gripper value fills both finger joints (0 closed, −0.04695 m open) |
 | wire | json_numpy over HTTP `POST /act`, `normalization_tag = yam_dual_molmoact2` |
 
-`offline_tests/test_molmoact2_yam_client.py` exercises the mapping and a full round trip
-against a fake server; `offline_tests/test_bimanual_yam_asset.py` pins the asset the contract
-assumes.
-
 ## Results (2026-09-03, 4 envs)
 
 | task | success |

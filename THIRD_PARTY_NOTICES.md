@@ -8,8 +8,8 @@ It depends on the following third-party open-source packages, each governed by i
 
 | Package | Version | License | License URL |
 |---|---|---|---|
-| isaaclab | 2.2.0 / 2.3.2.post1 | BSD-3-Clause | https://github.com/isaac-sim/IsaacLab/blob/main/LICENSE |
-| isaacsim | 5.0.0.0 / 5.1.0.0 | Apache-2.0 | https://github.com/isaac-sim/IsaacSim/blob/main/LICENSE.md |
+| isaaclab | 3.0.0b2.post1 | BSD-3-Clause | https://github.com/isaac-sim/IsaacLab/blob/main/LICENSE |
+| isaacsim | 6.0.1.0 | Apache-2.0 | https://github.com/isaac-sim/IsaacSim/blob/main/LICENSE.md |
 | torch | 2.7.0+cu128 | BSD-3-Clause | https://github.com/pytorch/pytorch/blob/main/LICENSE |
 | numpy | 1.26.0 | BSD-3-Clause | https://github.com/numpy/numpy/blob/main/LICENSE.txt |
 | gymnasium | 1.2.0 | MIT | https://github.com/Farama-Foundation/Gymnasium/blob/main/LICENSE |

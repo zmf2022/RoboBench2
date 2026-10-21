@@ -8,7 +8,7 @@ levels, names the tools that produce them, and states what has and has not been 
 | level | meaning | produced by |
 |---|---|---|
 | RUNTIME | a recorded GPU run demonstrates the behaviour | `scripts/verify_patches.py` PASS on a patched run and FAIL on the same predicate over a pre-patch run of the same task; or a human confirming the flag on a linked episode |
-| OFFLINE | unit-tested, or replayed over recorded logs | `offline_tests/`, `scripts/reflag.py` + `scripts/flag_regression.py` |
+| OFFLINE | unit-tested, or replayed over recorded logs | historical unit tests, `scripts/reflag.py` + `scripts/flag_regression.py` |
 | NONE | written, never executed | — |
 
 Two rules apply throughout:
@@ -19,18 +19,14 @@ Two rules apply throughout:
 2. A PASS requires a baseline FAIL. The same predicate is run over the pre-patch
    recording; a predicate that passes on both has not measured the change.
 
-## Offline tests
+## Current checks and historical tests
 
-`python -m pytest offline_tests` runs 251 tests with no simulator and no GPU in ~5 s. They
-run in CI on every push (`.github/workflows/offline-tests.yml`). In addition to unit tests of
-each change, they check three classes of bug that each cost a GPU launch to discover:
+The former `offline_tests/` suite and its fixtures have been removed. Historical test
+counts and file paths in the reports describe earlier revisions, not runnable checks
+in the current checkout. The OFFLINE evidence label is retained for those past results.
 
-- every Python source under `robolab/`, `policies/`, `scripts/`, `dashboard/` must parse;
-- every option a runner reads (`args_cli.<name>`) must be declared;
-- every robot-config label must be shadowed to `None` on the generated scene config, or
-  `InteractiveScene` rejects it at boot.
-
-`tests/` is upstream's install-verification suite and boots Isaac Sim.
+Current CI runs task-definition and scene-intersection audits via
+`.github/workflows/static-audits.yml`. The upstream `tests/` suite remains and boots Isaac Sim.
 
 ## Verifying a recorded run
 

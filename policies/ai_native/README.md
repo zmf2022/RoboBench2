@@ -2,6 +2,9 @@
 
 This directory contains the RoboLab policy implementations for [Astranomy](https://research.nvidia.com/labs/srl/projects/astranomy/), an empirical study of GPT-6 Astra as a native robot policy. Astranomy studies direct action generation, robot control through a persistent agent conversation, and model supervision of a robot foundation policy.
 
+For environment installation and backend selection, start with the
+[Astranomy setup guide](../../README.md#astranomy).
+
 ## Policies
 
 | Policy | Description | Status | Documentation |

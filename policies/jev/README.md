@@ -120,17 +120,6 @@ An automatic empty-grasp reopen (`vlm_agent` has one). RoboJEV makes this the
 and `INTENT_RULES` says to reopen and retry — so adding a reflex here would
 quietly take the decision away from the policy being evaluated.
 
-## Tests
-
-```bash
-python -m pytest offline_tests/test_jev.py     # no simulator, no server
-```
-
-Beyond parsing, these pin: normalised steps, criteria that only cite fields the
-state measures (and are not prose), the physical grasp test, the one-shot
-guard, and a closed-loop pick-and-place against a toy plant. Each of the four
-adaptations above is verified to fail that closed loop when reverted.
-
 ## Status
 
 - [x] Two-stage decisions, RoboJEV schema and criteria

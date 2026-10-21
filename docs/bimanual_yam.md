@@ -5,16 +5,16 @@ wrist camera per arm. This is the station most bimanual training data is collect
 MolmoAct 2 research kit, I2RT's teleoperation stations), and the one rig in this repository
 with a released policy that drives it: Ai2's `MolmoAct2-BimanualYAM` checkpoint.
 
-Everything below runs from a fresh clone. Isaac Sim 5.1 and Isaac Lab are needed for the
-simulator steps (Linux with an NVIDIA GPU; see the top-level [README](../README.md#installation)).
-The checks under "Without Isaac" run on any machine with three packages.
+For simulator steps, install the current Isaac Sim 6.0.1 / Isaac Lab environment
+(Linux with an NVIDIA GPU; see [installation](../README.md#installation)).
+The dated measurements below were collected on the historical simulator stack.
+The asset rebuild below does not require Isaac Sim.
 
-## Without Isaac: the asset and the client contract
+## Rebuild the asset without Isaac Sim
 
 ```bash
 git lfs pull                                         # the USD and STL files are LFS objects (a clone with git-lfs installed already did this)
-uv pip install pytest numpy usd-core                 # all the no-Isaac checks need (plain pip is refused inside the uv venv)
-python -m pytest offline_tests/test_bimanual_yam_asset.py offline_tests/test_molmoact2_yam_client.py   # 17 tests
+uv pip install numpy usd-core
 python assets/robots/_utils/build_bimanual_yam.py    # rebuilds the USD from I2RT's URDF, a few seconds
 ```
 
@@ -105,8 +105,6 @@ with your model, keep `_postprocess_chunk`, run:
 ```bash
 python policies/yam_template/run.py --task YamPutEverythingInBoxTask --task-dirs bimanual --num-envs 2 --headless
 ```
-
-`offline_tests/test_yam_template_client.py` checks the template against the contract without Isaac.
 
 ## The rig itself
 

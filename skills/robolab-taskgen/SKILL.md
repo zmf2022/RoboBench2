@@ -342,7 +342,7 @@ See [Task Libraries](../../docs/task_libraries.md) for metadata details and [Env
 
 ---
 
-**Important:** Run these commands in the project's Docker image. See [Docker setup](../../docker/README.md) for build and run instructions.
+**Important:** Run these commands in the project's Docker image. See [Docker setup](../../README.md#docker) for build and run instructions.
 
 ## Further Reading
 

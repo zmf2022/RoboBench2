@@ -1,225 +1,295 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ribble.gif"><img src="docs/images/ribble-dark.gif" alt="" height="42" align="absmiddle" /></picture> RoboLab</h1>
 
-RoboLab is a task-based simulation benchmark for robot manipulation policies built on [Isaac Lab](https://github.com/isaac-sim/IsaacLab), based on [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.2. It provides 120 manipulation tasks, configurable robot embodiments, policy integrations, and evaluation and recording tools.
+**RoboLab** 是基于 [NVIDIA Isaac Lab](https://github.com/isaac-sim/IsaacLab) 构建、面向机器人操作策略的任务式评估基准。它提供 100 多个具备自动成功检测功能的操作任务，采用服务端与客户端策略架构，支持多环境并行评估，旨在为通用机器人策略提供可复现、大规模的仿真基准评测。
 
-<h4 align="center"><a href="assets/objects/README.md">Objects</a> · <a href="assets/scenes/README.md">Scenes</a> · <a href="robolab/tasks/README.md">Tasks</a> · <a href="robolab/robots/README.md">Robots</a> · <a href="policies/README.md">Policy Clients</a></h4>
+<h4 align="center"><a href="assets/objects/README.md">物体</a> · <a href="assets/scenes/README.md">场景</a> · <a href="robolab/tasks/README.md">任务</a> · <a href="robolab/robots/README.md">机器人</a> · <a href="policies/README.md">策略客户端</a></h4>
 
 <div align="center">
-  <img src="docs/images/robolab.png" alt="RoboLab Overview" width="800"/>
+  <img src="docs/images/robolab.png" alt="RoboLab 概览" width="800"/>
 </div>
 
-## Upstream News
+<a id="upstream-news"></a>
 
-- **[2026/10/18]** 🔥 Added [**Astranomy**](https://research.nvidia.com/labs/srl/projects/astranomy/) policy code, using general-purpose models (such as GPT-6 Astra) as a native robot policy.
-- **[2026/10/13]** 🔥 [**LADDER**](https://ladder.insait.ai/) introduces RoboLab-Long, a suite of 44 tasks for evaluating long-horizon manipulation, as part of a 145-task benchmark spanning three simulation suites. See [Task Libraries](docs/ecosystem.md#task-libraries).
-- **[2026/08/19]** 🤖 [**DROID+**](https://github.com/NVlabs/DroidPlus) is released: A simple DROID hardware stack. Your RoboLab policy setup will also work with DROID+.
-- **[2026/08/07]** 🔥 [**RoboVoLo**](https://github.com/NVlabs/RoboVoLo) is released — a task library from the [VoLo](https://chicychen.github.io/VoLo/) project extending RoboLab with long-horizon and reasoning-heavy manipulation tasks, evaluated via the bundled [VoLo policy backend](policies/volo/README.md).
+## 上游动态
 
-For all updates, including minor improvements and bug fixes, see the [Changelog](CHANGELOG.md).
+- **[2026/10/18]** 🔥 新增 [**Astranomy**](https://research.nvidia.com/labs/srl/projects/astranomy/) 策略代码，使用通用模型（如 GPT-6 Astra）直接作为机器人策略。
+- **[2026/10/13]** 🔥 [**LADDER**](https://ladder.insait.ai/) 推出 RoboLab-Long，包含 44 个用于评估长时序操作的任务，是其覆盖三个仿真套件、共 145 个任务的基准的一部分。参见[任务库](docs/ecosystem.md#task-libraries)。
+- **[2026/08/19]** 🤖 [**DROID+**](https://github.com/NVlabs/DroidPlus) 发布：一套简洁的 DROID 硬件方案。现有 RoboLab 策略配置也可用于 DROID+。
+- **[2026/08/07]** 🔥 [**RoboVoLo**](https://github.com/NVlabs/RoboVoLo) 发布：来自 [VoLo](https://chicychen.github.io/VoLo/) 项目的任务库，为 RoboLab 扩展了长时序、强调推理能力的操作任务，可通过随附的 [VoLo 策略后端](policies/volo/README.md)进行评估。
 
-## Key Features
+完整更新（包括小幅改进和问题修复）请参见[更新日志](CHANGELOG.md)。
 
-- **RoboLab-120**: 120 benchmark [tasks](robolab/tasks/README.md) spanning pick-and-place, stacking, rearrangement, tool use, and more, each with language instructions and automated success/failure detection via composable predicates.
-- **Bring your own robot**: tasks are not tied to a specific embodiment; any robot compatible with Isaac Lab can be used. Single-arm DROID, Franka and Kinova ship, along with two bimanual rigs ([`robolab/robots/README.md`](robolab/robots/README.md)).
-- **Rich asset libraries**: [objects](assets/objects/README.md), [scenes](assets/scenes/README.md), and curated [backgrounds](assets/backgrounds/README.md) for creating new scenes and tasks.
-- **AI-enabled workflows**: generate new scenes and tasks from natural language with the [/robolab-scenegen](skills/robolab-scenegen/) and [/robolab-taskgen](skills/robolab-taskgen/) Claude Code skills.
-- **Multi-environment parallel evaluation**: parallel episodes with vectorized conditionals and per-environment termination.
-- **Results dashboard**: a self-contained web [dashboard](docs/dashboard.md) for browsing scenes and tasks, replaying episodes (all cameras on one transport, the event timeline as the scrubber, `?t=` permalinks), and comparing experiments.
+<a id="key-features"></a>
 
-See the [Ecosystem](docs/ecosystem.md) page for projects built on RoboLab.
+## 主要功能
 
-## Getting Started
+- **RoboLab-120**：120 个基准[任务](robolab/tasks/README.md)，涵盖抓取放置、堆叠、重排、工具使用等。每个任务均包含语言指令，并通过可组合的条件谓词自动判断成功或失败。
+- **支持自定义机器人**：任务不绑定特定本体，可使用任何兼容 Isaac Lab 的机器人。项目内置单臂 DROID、Franka、Kinova，以及两套双臂配置，参见[机器人文档](robolab/robots/README.md)。
+- **丰富的资产库**：提供[物体](assets/objects/README.md)、[场景](assets/scenes/README.md)和精选[背景](assets/backgrounds/README.md)，用于创建新场景和任务。
+- **AI 辅助工作流**：通过 [/robolab-scenegen](skills/robolab-scenegen/) 和 [/robolab-taskgen](skills/robolab-taskgen/) 两个 Claude Code 技能，根据自然语言生成场景和任务。
+- **多环境并行评估**：支持并行运行多个回合、向量化条件判断，以及各环境独立终止。
+- **结果面板**：内置独立的网页[面板](docs/dashboard.md)，用于浏览场景和任务、回放回合并比较实验。所有相机画面通过同一通道传输，事件时间轴可用于定位回放位置，并支持 `?t=` 时间定位链接。
 
-Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) and a system `ffmpeg` (used for video recording). The Isaac Sim/Isaac Lab stack is selected with a mutually-exclusive extra. `isaac60` is the default documented path; `isaac50` and `isaac51` remain available for existing experiments. See [Isaac Sim 6 support](docs/isaac_sim_6.md) and [Requirements](#requirements).
+基于 RoboLab 构建的相关项目，请参见[生态](docs/ecosystem.md)。
 
-### Installation
+<a id="getting-started"></a>
+
+## 快速开始
+
+<a id="installation"></a>
+
+### 安装
+
+需要 [uv](https://docs.astral.sh/uv/getting-started/installation/)、`ffmpeg` 和 `git-lfs`。当前使用 Python 3.12、Isaac Sim 6.0.1 和 Isaac Lab 3.0 beta 2 patch 1。
+无桌面的 Linux 系统还需安装图形运行库：`sudo apt install libegl1 libvulkan1`。
+
+在仓库根目录执行：
 
 ```bash
-sudo apt install ffmpeg git-lfs
-# On a bare Linux image (a cloud GPU box without a desktop) Isaac Sim also needs the
-# GL/Vulkan runtime; without libegl1/libvulkan1 it crashes at RTX renderer init:
-# sudo apt install libegl1 libgl1 libglvnd0 libopengl0 libglx0 libgles2 libglu1-mesa libxt6 libvulkan1 vulkan-tools git-lfs
-git lfs version               # must print a version: without git-lfs the two lfs commands below print an error and every USD stays a 132-byte pointer
-git lfs install
-git clone https://github.com/zmf2022/EmbodiedBench.git robolab
-cd robolab
+git lfs pull
 uv venv --python 3.12
 source .venv/bin/activate
-uv sync --extra isaac60          # Isaac Sim 6.0.1 / Isaac Lab 3.0 beta
-# uv sync --extra isaac50        # Isaac Sim 5.0 / Isaac Lab 2.2.0 (Python 3.11)
-# uv sync --extra isaac51        # Isaac Sim 5.1 / Isaac Lab 2.3.2.post1 (Python 3.11)
+uv sync --extra isaac60 --extra test
 ```
 
-The stacks cannot coexist in one environment. To keep multiple versions available, install each into its own venv:
+验证安装：
 
 ```bash
-UV_PROJECT_ENVIRONMENT=.venv-60 uv sync --python 3.12 --extra isaac60
-UV_PROJECT_ENVIRONMENT=.venv-51 uv sync --python 3.11 --extra isaac51
+python -m pytest tests/ -q         # 仿真器集成检查，需要 GPU
 ```
 
-Verify the installation:
+未激活环境时，在命令前加 `uv run --no-sync`。
+
+<a id="astranomy"></a>
+
+### Astranomy
+
+提供 Direct-API（直接调用模型接口）和 Agentic（通过 Codex 持续对话控制机器人）两种方式。以下命令均在仓库根目录、激活 `.venv` 后执行，会产生模型调用费用。
+
+**Direct-API**：配置支持 Chat Completions 的服务地址、密钥和模型名称，然后运行一个回合：
 
 ```bash
-python -m pytest offline_tests     # 251 tests, no simulator: the evaluation-correctness suite
-uv run --no-sync pytest tests/     # boots Isaac Sim: isaaclab importable, all task definitions valid, one full episode runs
+export OPENAI_API_KEY="你的密钥"
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+export AI_NATIVE_MODEL="gpt-6-astra"
+
+python policies/ai_native/direct_api/list_models.py
+python policies/ai_native/direct_api/run.py \
+  --headless --task BananaInBowlTask --num-envs 1 --num-runs 1
 ```
 
-The Isaac suite auto-accepts the NVIDIA Omniverse EULA, so the run is headless with no prompts. More details at [Debugging → Diagnostic Scripts](docs/debug.md#diagnostic-scripts).
+使用其他服务商时，替换 `OPENAI_BASE_URL` 和 `AI_NATIVE_MODEL`。动作类型、历史观测和推理参数见 [Direct-API 参数说明](policies/ai_native/direct_api/README.md)。
 
-> **Running without activating the venv**: if you don't `source .venv/bin/activate`, prefix every `python` command with `uv run --no-sync` (e.g. `uv run --no-sync pytest tests/`). A bare `uv run` first re-syncs the environment to the default dependency set, which removes the Isaac extra you just installed.
-
-> **Long runs**: launch with `python -u` (or `PYTHONUNBUFFERED=1`). With stdout redirected to a file, Python block-buffers, and Isaac Sim frequently dies at shutdown before the buffer is flushed. Per-episode results are always flushed to `episode_results.jsonl`. A finished run writes `run_complete.json` next to it; a run directory without that file is partial.
-
-> **EULA outside the test suite**: when running other entry points (e.g. `policies/pi0_family/run.py`) for the first time, set `export OMNI_KIT_ACCEPT_EULA=Y` once. Cached after first acceptance.
-
-### Run without a policy
+**Agentic**：需要 Node.js／npm，以及具有 GPT-6 Astra 访问权限的 OpenAI API 密钥。安装实现所用的 Codex 版本，并为实验配置独立登录目录：
 
 ```bash
-# Run an empty episode with random actions (headless)
+npm install -g @openai/codex@0.149.1
+export OPENAI_API_KEY="你的密钥"
+export ASTRA_CODEX_HOME="$PWD/output/astra-codex-home"
+mkdir -p "$ASTRA_CODEX_HOME"
+printenv OPENAI_API_KEY | CODEX_HOME="$ASTRA_CODEX_HOME" codex login --with-api-key
+
+CODEX_HOME="$ASTRA_CODEX_HOME" python policies/ai_native/agentic/run.py \
+  --headless --embodiment droid --task RubiksCubeTask \
+  --seed 0 --num-envs 1 --num-runs 1 \
+  --video-mode sensor --renderer realtime \
+  --output-folder-name astra-example --allow-model-requests
+```
+
+每个并行进程使用独立的输出目录和 Codex 登录目录。工具、历史记录及视频示范配置见 [Agentic 参数说明](policies/ai_native/agentic/README.md)。Orchestrated 策略尚未提供。
+
+<a id="docker"></a>
+
+### Docker
+
+需要 Docker、NVIDIA Container Toolkit，以及 `nvcr.io/nvidia/isaac-lab:3.0.0-beta2` 镜像的访问权限。在仓库根目录构建并启动：
+
+```bash
+./docker/build_docker.sh my-tag
+./docker/run_docker.sh my-tag
+```
+
+运行脚本会转发 X11 界面并挂载仓库和缓存。镜像内已包含项目代码、资产和 Python 依赖；构建前先执行 `git lfs pull`。如需推送镜像，设置 `ROBOLAB_REGISTRY` 后执行 `./docker/build_docker.sh my-tag --push`。无界面运行及镜像内容见 [Docker 参考](docker/README.md)。
+
+<a id="version-compatibility"></a>
+
+### 版本兼容
+
+| Isaac Sim | Isaac Lab | 当前状态 |
+| --- | --- | --- |
+| 6.0.1 | 3.0 beta 2 patch 1 | 当前安装配置，使用 `--extra isaac60` |
+| 6.2.0 | 3.0 正式版 | 尚未适配，不提供 `isaac62` 安装选项 |
+
+6.2 的正式版移除了当前代码使用的 `sim.render` 配置，官方依赖采用 PyTorch 2.11／CUDA 13.0，不能只修改版本号升级。详见[接口审查和历史验证记录](docs/isaac_sim_6.md)。
+
+<a id="run-without-a-policy"></a>
+
+### 不加载策略运行
+
+```bash
+# 使用随机动作运行空回合（无界面模式）
 python examples/run_empty.py --headless
 
-# Run with GUI (Isaac Sim 6 requires --visualizer kit)
+# 使用图形界面运行（Isaac Sim 6 需要 --visualizer kit）
 python examples/run_empty.py --visualizer kit
 
-# Same, with a friction override, and read back what PhysX holds (docs/physics.md)
+# 指定摩擦系数，并读回 PhysX 实际使用的值（参见 docs/physics.md）
 python examples/run_empty.py --task BananaInBowlTask --headless --friction 0.5
 
-# Playback recorded demonstration data
+# 回放录制的示范数据
 python examples/run_recorded.py --headless
 
-# Toggle the gripper open/closed while holding the arm fixed (sanity-check
-# the gripper action path; saves sensor + viewport video to
-# output/run_gripper_toggle/<task>/)
+# 固定机械臂，交替打开和闭合夹爪，检查夹爪动作链路；
+# 传感器及视口视频保存至 output/run_gripper_toggle/<task>/
 python examples/run_gripper_toggle.py --task BananaInBowlTask --headless
 
-# Drive the dual-Franka rig with the scripted client
+# 使用脚本客户端驱动双 Franka 机器人
 python policies/bimanual/run.py --task BimanualLiftToteTask --num-envs 2 --headless
 
-# Move the bimanual YAM rig with the scripted client (no checkpoint needed)
+# 使用脚本客户端驱动双臂 YAM 机器人（无需模型权重）
 python policies/bimanual/run.py --robot yam --task YamPutEverythingInBoxTask --headless
 
-# Drive the bimanual YAM rig with MolmoAct 2 (serve the checkpoint first, see policies/molmoact2/README.md)
+# 使用 MolmoAct 2 驱动双臂 YAM（需先启动模型服务，参见 policies/molmoact2/README.md）
 python policies/molmoact2/run.py --task YamPutEverythingInBoxTask --task-dirs bimanual --num-envs 4 --headless
 ```
 
-> **Replay**: `run_recorded.py` restores the recorded initial state and replays the recorded actions open-loop, by default with the env configuration saved next to the recording (`env_cfg.json`). The recorded outcome is not invariant across simulator versions, since contact dynamics change between Isaac Sim / Isaac Lab releases (see [Requirements](#requirements)). Faithful reproduction requires recording and replaying with a single env. See [Replaying Recorded Episodes](docs/replay.md).
+> **回放说明**：`run_recorded.py` 会恢复录制时的初始状态，并以开环方式回放记录的动作，默认使用录制文件旁保存的环境配置（`env_cfg.json`）。不同 Isaac Sim / Isaac Lab 版本的接触动力学存在差异，回放结果可能随版本变化，参见[运行要求](#requirements)。要忠实复现轨迹，录制和回放均需使用单个环境。详情参见[录制回合回放](docs/replay.md)。
 
-### Run with a policy
+<a id="run-with-a-policy"></a>
 
-RoboLab uses a server-client architecture: the model runs as a standalone server, and RoboLab connects to it through an inference client. For a quick test, use [π0.5 via OpenPI](policies/pi0_family/README.md) and serve the joint-position checkpoint (`scripts/serve_pi05.sh`). The OpenPI `--env DROID` convenience flag serves delta actions, which this action space does not accept.
+### 加载策略运行
+
+RoboLab 采用服务端与客户端架构：模型作为独立服务运行，RoboLab 通过推理客户端连接模型。快速测试可使用[基于 OpenPI 的 π0.5](policies/pi0_family/README.md)，并启动关节位置模型权重对应的服务（`scripts/serve_pi05.sh`）。OpenPI 的快捷参数 `--env DROID` 会提供增量动作，而此处的动作空间不接受这类动作。
 
 ```bash
 cd robolab
 uv run --no-sync python policies/pi0_family/run.py --policy pi05 --task BananaInBowlTask --num-envs 10
 ```
 
-Use the [dashboard](#dashboard) to view the output written to your local folder.
+使用[结果面板](#dashboard)查看本地输出目录中的结果。
 
-### Common CLI Options
+<a id="common-cli-options"></a>
+
+### 常用命令行选项
 
 ```bash
-# Run headlessly
+# 无界面运行
 python policies/pi0_family/run.py --policy pi05 --headless
 
-# Run on specific tasks (these two are good for sanity checking)
+# 指定任务（这两个任务适合做基本检查）
 python policies/pi0_family/run.py --policy pi05 --task BananaInBowlTask RubiksCubeAndBananaTask
 
-# Run on a tag of tasks
+# 按标签选择任务
 python policies/pi0_family/run.py --policy pi05 --tag semantics
 
-# Run 12 parallel episodes per task
+# 每个任务并行运行 12 个回合
 python policies/pi0_family/run.py --policy pi05 --headless --num-envs 12
 
-# Run at a stated friction (upstream | <mu> | realistic | table.json); recorded in the run directory
+# 指定摩擦配置（upstream | <mu> | realistic | table.json），配置会记录到运行目录
 python policies/pi0_family/run.py --policy pi05 --headless --friction realistic
 
-# Disable subtask progress tracking (on by default; drops score/reason from results)
+# 禁用子任务进度跟踪（默认启用；禁用后结果中不包含 score/reason）
 python policies/pi0_family/run.py --policy pi05 --disable-subtask
 
-# Resume a previous run (skips completed episodes)
+# 恢复先前的运行，跳过已完成的回合
 python policies/pi0_family/run.py --policy pi05 --output-folder-name my_previous_run
 ```
 
-Run one process per task. Passing several tasks to one invocation instantiates every task's environments up front and crashes (upstream issue, see [`docs/environment_run.md`](docs/environment_run.md)).
+每个任务应使用独立进程。一次调用传入多个任务会预先实例化所有任务的环境，并导致崩溃。这是上游已知问题，参见[环境运行说明](docs/environment_run.md)。
 
-### Check a run
+<a id="check-a-run"></a>
+
+### 检查运行结果
 
 ```bash
-scripts/verify_patches.py output/<run>                # PASS / FAIL / N/A per change, from the recording
-scripts/verify_patches.py --summary output/rc*        # one table across runs; exit 1 on any FAIL
-scripts/flag_regression.py --output-dir output        # score the flags against the human verdicts
+scripts/verify_patches.py output/<run>                # 根据录制数据逐项报告 PASS / FAIL / N/A
+scripts/verify_patches.py --summary output/rc*        # 汇总多次运行；存在 FAIL 时退出码为 1
+scripts/flag_regression.py --output-dir output        # 对照人工判定评估标记结果
 ```
 
-See [`docs/verified/verification.md`](docs/verified/verification.md).
+详情参见[验证说明](docs/verified/verification.md)。
 
-## Example Tasks
+<a id="example-tasks"></a>
 
-See the full [Benchmark Task Library](robolab/tasks/README.md) for all 120 tasks.
+## 任务示例
+
+全部 120 个任务请参见完整的[基准任务库](robolab/tasks/README.md)。
 
 <div align="center">
-  <img src="docs/images/Make_sure_all_the_white_mugs_are_upright_so_that_the_opening_is_facing_upwards_0_hstack_3X_fps24_width800.gif" alt="Make sure all the white mugs are upright so that the opening is facing upwards" width="800"/>
-  <br><em>"Make sure all the white mugs are upright so that the opening is facing upwards."</em>
+  <img src="docs/images/Make_sure_all_the_white_mugs_are_upright_so_that_the_opening_is_facing_upwards_0_hstack_3X_fps24_width800.gif" alt="确保所有白色杯子都直立，杯口朝上" width="800"/>
+  <br><em>“确保所有白色杯子都直立，杯口朝上。”</em>
 </div>
 
 <div align="center">
-  <img src="docs/images/Put_all_plastic_bottles_away_in_the_bin_3_hstack_3X_fps24.gif" alt="Put all plastic bottles away in the bin" width="800"/>
-  <br><em>"Put all plastic bottles away in the bin."</em>
+  <img src="docs/images/Put_all_plastic_bottles_away_in_the_bin_3_hstack_3X_fps24.gif" alt="将所有塑料瓶收进箱子" width="800"/>
+  <br><em>“将所有塑料瓶收进箱子。”</em>
 </div>
 
 <div align="center">
-  <img src="docs/images/Put_the_orange_measuring_cup_and_the_blue_measuring_cup_outside_of_the_plate_0_hstack_3X_fps24_width800.gif" alt="Put the orange measuring cup and the blue measuring cup outside of the plate" width="800"/>
-  <br><em>"Put the orange measuring cup and the blue measuring cup outside of the plate."</em>
+  <img src="docs/images/Put_the_orange_measuring_cup_and_the_blue_measuring_cup_outside_of_the_plate_0_hstack_3X_fps24_width800.gif" alt="将橙色量杯和蓝色量杯放到盘子外面" width="800"/>
+  <br><em>“将橙色量杯和蓝色量杯放到盘子外面。”</em>
 </div>
 
-## Dashboard
+<a id="dashboard"></a>
 
-A self-contained web dashboard for browsing the benchmark (scenes and tasks) and analyzing experiment results.
+## 结果面板
+
+项目内置独立的网页面板，用于浏览基准中的场景和任务，并分析实验结果。
 
 ```bash
 uv run --no-sync robolab-dashboard --host 127.0.0.1
-# open http://localhost:8080
+# 在浏览器中打开 http://localhost:8080
 ```
 
-The dashboard has no authentication; bind it to `127.0.0.1` on shared machines.
+面板没有身份认证功能，在共享机器上应绑定到 `127.0.0.1`。
 
-See [docs/dashboard.md](docs/dashboard.md) for the feature tour, CLI flags, and API endpoints.
+功能介绍、命令行参数及 API 接口请参见[面板文档](docs/dashboard.md)。
 
-## Documentation
+<a id="documentation"></a>
 
-Full documentation is at [docs/README.md](docs/README.md), covering:
+## 文档
 
-- [Objects](docs/objects.md), [Scenes](docs/scene.md), [Tasks](docs/task.md): creating and managing assets and benchmark tasks
-- [Robots](docs/robots.md), [Cameras](docs/camera.md), [Lighting](docs/lighting.md), [Backgrounds](docs/background.md): configuring simulation parameters
-- [Environment Registration](docs/environment_registration.md): combining tasks with robot/observation/action configs
-- [Inference Clients](policies/README.md): supported open-source models and clients
-- [Replaying Recorded Episodes](docs/replay.md): playing back recorded HDF5 episodes faithfully
-- [Analysis and Results](docs/analysis.md), [Data and Output](docs/data.md): summarizing, comparing, and auditing results; the output schema
-- [Dashboard](docs/dashboard.md): interactive web viewer for benchmark, tasks, scenes, and eval results
-- [Subtask Checking](docs/subtask.md), [Conditionals](docs/task_conditionals.md), [Event Tracking](docs/event_tracking.md)
-- [Ecosystem](docs/ecosystem.md): task libraries and projects built on RoboLab
+完整文档入口为 [docs/README.md](docs/README.md)，内容包括：
 
-## Requirements
+- [环境安装](#installation)与 [Astranomy 配置](#astranomy)
+- [物体](docs/objects.md)、[场景](docs/scene.md)、[任务](docs/task.md)：创建和管理资产及基准任务
+- [机器人](docs/robots.md)、[相机](docs/camera.md)、[光照](docs/lighting.md)、[背景](docs/background.md)：配置仿真参数
+- [环境注册](docs/environment_registration.md)：组合任务、机器人、观测和动作配置
+- [推理客户端](policies/README.md)：支持的开源模型及客户端
+- [录制回合回放](docs/replay.md)：忠实回放已记录的 HDF5 回合
+- [分析与结果](docs/analysis.md)、[数据与输出](docs/data.md)：结果汇总、比较、审计及输出数据格式
+- [结果面板](docs/dashboard.md)：交互式浏览基准、任务、场景及评估结果
+- [子任务检查](docs/subtask.md)、[条件谓词](docs/task_conditionals.md)、[事件跟踪](docs/event_tracking.md)
+- [生态](docs/ecosystem.md)：任务库及基于 RoboLab 构建的项目
 
-| Dependency | Version |
-|---|---|
-| Isaac Sim | 6.0.1 (default), 5.0, or 5.1 |
-| Isaac Lab | 3.0 beta 2 patch 1, 2.2.0, or 2.3.2.post1 |
-| Python | 3.12 for Isaac Sim 6; 3.11 for Isaac Sim 5 |
-| Linux | Ubuntu 22.04+ |
+<a id="requirements"></a>
 
-> **Note on simulator versions**: the stacks ship different PhysX builds, so contact-rich dynamics (grasping, object settling) are not invariant across versions. Benchmark results are best compared on the same stack. RoboLab converts recorded quaternion layouts across versions, but numerical replay fidelity still requires the original simulator stack.
+## 运行要求
 
-- **Disk space**: ~8 GB (assets account for ~7 GB)
-- **GPU**: NVIDIA RTX GPU required. Recommend 48 GB+ VRAM. See [Isaac Lab's hardware requirements](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html#system-requirements) and the per-task [`num_envs` guide](docs/env_vram_size_guide.md).
-- **Speed**: a 4-env run of one task takes 5–17 minutes on an L40 with ~200 ms inference; the full benchmark is ~30 GPU hours per policy.
+| 依赖      | 版本               |
+| --------- | ------------------ |
+| Isaac Sim | 6.0.1              |
+| Isaac Lab | 3.0 beta 2 patch 1 |
+| Python    | 3.12               |
+| Linux     | Ubuntu 22.04+      |
 
-## License
+> **仿真器版本说明**：不同版本使用不同的 PhysX 构建，抓取、物体静置等涉及接触的动力学行为可能存在差异。基准结果应尽量在相同环境版本下比较。RoboLab 可以转换不同版本录制数据中的四元数布局，但要保证数值层面的回放一致性，仍需使用原始仿真环境版本。
 
-RoboLab is released under the [Apache License 2.0](./LICENSE); see [NOTICE](./NOTICE). Third-party dependency licenses are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+- **磁盘空间**：约 8 GB，其中资产约占 7 GB。
+- **GPU**：需要 NVIDIA RTX GPU，建议显存至少 48 GB。参见 [Isaac Lab 硬件要求](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html#system-requirements)和各任务的 [`num_envs` 指南](docs/env_vram_size_guide.md)。
+- **运行速度**：在 L40 上、推理耗时约 200 ms 时，单任务 4 环境运行约需 5–17 分钟；每种策略跑完整个基准约需 30 GPU 小时。
 
-## Citation
+<a id="license"></a>
 
-RoboLab is the work of NVIDIA's Seattle Robotics Lab. If you use the benchmark, cite the paper:
+## 许可证
+
+RoboLab 使用 [Apache License 2.0](./LICENSE) 发布，参见 [NOTICE](./NOTICE)。第三方依赖的许可证列于 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+
+<a id="citation"></a>
+
+## 引用
+
+RoboLab 由 NVIDIA 西雅图机器人实验室开发。使用本基准时，请引用以下论文：
 
 ```bibtex
 @inproceedings{yang2026robolab,
@@ -233,8 +303,10 @@ RoboLab is the work of NVIDIA's Seattle Robotics Lab. If you use the benchmark, 
 }
 ```
 
-When reporting results, include the repository commit and simulator version.
+报告结果时，请注明仓库提交版本及仿真器版本。
 
-## Contributing
+<a id="contributing"></a>
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how changes are documented and verified, and for the upstream acknowledgements.
+## 参与贡献
+
+变更记录、验证要求及上游致谢请参见[贡献指南](CONTRIBUTING.md)。

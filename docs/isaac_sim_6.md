@@ -3,25 +3,41 @@
 RoboLab supports Isaac Sim 6.0.1 with the Isaac Lab 3.0 beta 2 patch 1 stack.
 This is the recommended stack for RTX PRO 5000/6000 and other recent GPUs.
 
-## Install
+## Isaac Sim 6.2 upgrade status
 
-Isaac Sim 6 requires Python 3.12. It cannot share an environment with an
-Isaac Sim 5 stack.
+As checked on 2026-10-21, NVIDIA pairs **Isaac Sim 6.2.0 with Isaac Lab 3.0.0 GA**.
+The current `isaac60` extra remains pinned to Isaac Lab `3.0.0b2.post1` / Isaac Sim 6.0.1.
+There is no runnable `isaac62` configuration yet: changing the package pin alone is insufficient.
 
-```bash
-uv venv --python 3.12
-source .venv/bin/activate
-uv sync --extra isaac60
-uv run pytest tests/
-```
+Static source review found these migration boundaries:
 
-For the container image:
+| Boundary | Current project | Isaac Lab 3.0 GA | Status |
+| --- | --- | --- | --- |
+| Dependencies | PyTorch from the CUDA 12.8 index; Lab beta wheel | PyTorch 2.11 / CUDA 13.0, Warp 1.17 and Sim 6.2 | Requires a separate dependency resolution |
+| Render configuration | `robolab/core/environments/runtime.py` reads `env_cfg.sim.render.carb_settings` on every environment creation | GA `SimulationCfg` no longer declares `render` | Direct upgrade is incompatible at this boundary |
+| Application launch | Runners call `AppLauncher` | Retained as a deprecated adapter over `launch_simulation` | Adapter exists; runtime behavior has not been tested here |
+| Robot state and observations | WXYZ/XYZW conversion, ProxyArray conversion and indexed state writes | GA backend integration must be checked against these contracts | Not verified on 6.2 |
 
-```bash
-./docker/build_docker.sh --isaac60
-```
+Before enabling a supported 6.2 install option, adapt the renderer/launcher boundary, resolve
+its official dependency set in an isolated environment, and verify rendered startup, camera
+observations, gripper/contact behavior and one complete recorded task. No 6.2 packages were
+installed and no 6.2 simulation was run during this review. Historical 6.0 measurements below
+are not evidence of 6.2 compatibility.
 
-The default Docker base is `nvcr.io/nvidia/isaac-lab:3.0.0-beta2`.
+Official sources:
+
+- [Isaac Sim compatibility matrix](https://docs.isaacsim.omniverse.nvidia.com/6.2.0/installation/compatibility.html)
+- [Isaac Lab 3.0 release](https://github.com/isaac-sim/IsaacLab/releases/tag/v3.0.0)
+- [GA dependency definitions](https://github.com/isaac-sim/IsaacLab/blob/v3.0.0/pyproject.toml)
+- [GA simulation configuration](https://github.com/isaac-sim/IsaacLab/blob/v3.0.0/source/isaaclab/isaaclab/sim/simulation_cfg.py)
+- [GA AppLauncher adapter](https://github.com/isaac-sim/IsaacLab/blob/v3.0.0/source/isaaclab/isaaclab/app/app_launcher.py)
+
+## Setup
+
+Installation and version selection are covered in the main README:
+[installation](../README.md#installation), [Docker](../README.md#docker), and
+[version compatibility](../README.md#version-compatibility).
+The sections below retain the interface audit and historical validation evidence.
 
 ## Compatibility design
 
@@ -74,16 +90,18 @@ Run at least one rendered smoke test and one contact-rich task on the target
 driver/GPU before producing benchmark results:
 
 ```bash
-uv run python examples/run_kinova_jointpos.py --headless --num-steps 180
-uv run python examples/run_abs_ik_demo.py --headless
+uv run --no-sync python examples/run_kinova_jointpos.py --headless --num-steps 180
+uv run --no-sync python examples/run_abs_ik_demo.py --headless
 ```
 
 Isaac Lab 3.0 is still a beta line. NVIDIA's 3.0 beta release notes list a
 known Robotiq 2F-85 issue, so the DROID and Kinova grippers need particular
-attention in smoke testing. Keep Isaac Sim 5.1 available for result comparison
-until the task suite passes on your hardware.
+attention in smoke testing. Validate them on the selected driver/GPU before reporting results.
 
-## Validation in RoboLab Verified
+## Historical validation in RoboLab Verified
+
+The following is retained as a dated comparison, not as a current installation guide.
+The old environment names and extras below are no longer supported installation options.
 
 Checked on an A40 with both stacks installed side by side (`.venv-51`: Python 3.11,
 `--extra isaac51`; `.venv-60`: Python 3.12, `--extra isaac60`) from one tree, with an open-loop

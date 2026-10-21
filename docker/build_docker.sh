@@ -9,7 +9,7 @@ IMAGE_NAME="${ROBOLAB_REGISTRY:-robolab}"
 PUSH=false
 OPENPI_COMMIT=""
 # IsaacLab/IsaacSim stack selector -> base image tag (see docker/Dockerfile).
-# 3.0.0-beta2 = IsaacSim 6.0 (default); older stacks remain selectable.
+# 3.0.0-beta2 = IsaacSim 6.0.
 ISAACLAB_TAG="3.0.0-beta2"
 TAG_SUFFIX="-isaac60"
 RUNTIME_USER="1000:1000"
@@ -19,10 +19,9 @@ for arg in "$@"; do
     case "$arg" in
         --push) PUSH=true ;;
         --openpi-commit=*) OPENPI_COMMIT="${arg#*=}" ;;
-        --isaac50) ISAACLAB_TAG="2.2.0"; TAG_SUFFIX="-isaac50"; RUNTIME_USER="0:0" ;;
-        --isaac51) ISAACLAB_TAG="2.3.0"; TAG_SUFFIX="-isaac51"; RUNTIME_USER="0:0" ;;
         --isaac60) ISAACLAB_TAG="3.0.0-beta2"; TAG_SUFFIX="-isaac60"; RUNTIME_USER="1000:1000" ;;
         --isaaclab-tag=*) ISAACLAB_TAG="${arg#*=}"; TAG_SUFFIX="-isaaclab-${arg#*=}" ;;
+        --*) echo "Unsupported option: $arg" >&2; exit 2 ;;
         *) IMAGE_TAG="$arg" ;;
     esac
 done

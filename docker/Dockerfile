@@ -1,5 +1,5 @@
 # IsaacLab/IsaacSim stack is selected by the base image tag. The default is
-# Isaac Lab 3.0 beta 2 / Isaac Sim 6.0; 2.2.0 and 2.3.0 remain supported.
+# Isaac Lab 3.0 beta 2 / Isaac Sim 6.0.
 # The project's isaac extras are NOT installed here: the
 # base image already provides the matching IsaacLab/IsaacSim, so `pip install
 # -e .` only pulls the non-isaac deps.

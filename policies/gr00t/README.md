@@ -45,18 +45,18 @@ Clone RoboLab and install its native environment. `uv sync` installs RoboLab's I
 git clone https://github.com/NVlabs/RoboLab.git
 cd RoboLab
 sudo apt install ffmpeg
-uv venv --python 3.11
+uv venv --python 3.12
 source .venv/bin/activate
-uv sync
+uv sync --extra isaac60
 export OMNI_KIT_ACCEPT_EULA=Y
 ```
 
-Docker is optional. If you prefer an isolated, prebuilt Isaac Lab environment, follow RoboLab's [Docker guide](../../docker/README.md) instead.
+Docker is optional. If you prefer an isolated, prebuilt Isaac Lab environment, follow RoboLab's [Docker guide](../../README.md#docker) instead.
 
 Run a smoke test against the server. `--open-loop-horizon 8` is part of the validated N1.7 baseline and controls how many actions RoboLab executes from each predicted chunk before querying the server again:
 
 ```shell
-uv run python policies/gr00t/run.py \
+uv run --no-sync python policies/gr00t/run.py \
   --task BananaOnPlateTask \
   --remote-host 127.0.0.1 \
   --remote-port 5555 \
@@ -66,7 +66,7 @@ uv run python policies/gr00t/run.py \
 To evaluate multiple sub-environments in parallel in headless mode:
 
 ```shell
-uv run python policies/gr00t/run.py \
+uv run --no-sync python policies/gr00t/run.py \
   --task BananaOnPlateTask \
   --remote-host 127.0.0.1 \
   --remote-port 5555 \

@@ -1,5 +1,9 @@
 # RoboLab Verified
 
+Historical test paths in these reports refer to earlier revisions. The `offline_tests/`
+suite and its fixtures have been removed from the current checkout; see
+[current verification tools](verification.md) for the remaining checks.
+
 A fork of [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.1. The fork keeps
 upstream's 120 tasks, scenes, success predicates and physics defaults. It changes how episodes
 are scored, how subtasks are credited, what the per-episode event log records, and what the

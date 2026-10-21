@@ -1,6 +1,6 @@
 # YAM Arm Physical Properties
 
-This document records the physical and kinematic properties of the six-DOF YAM arm from [`yam.urdf`](yam.urdf). The corresponding arm-only MuJoCo model is [`yam.xml`](yam.xml).
+This document records the physical and kinematic properties of the six-DOF YAM arm from [`yam.urdf`](yam.urdf). The corresponding arm-only MuJoCo model is `yam.xml` (not included in this directory).
 
 ## Scope and conventions
 

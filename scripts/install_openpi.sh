@@ -10,7 +10,7 @@
 #     removing openpi_client mid-session.
 #
 # Usage, from the RoboLab checkout:
-#   OPENPI_DIR=../openpi VENV=.venv-51 scripts/install_openpi.sh
+#   OPENPI_DIR=../openpi VENV=.venv scripts/install_openpi.sh
 set -euxo pipefail
 ROBOLAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OPENPI_DIR="${OPENPI_DIR:-$ROBOLAB_DIR/../openpi}"
