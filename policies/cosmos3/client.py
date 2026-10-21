@@ -8,7 +8,7 @@ import time
 import numpy as np
 import torch
 import torch.nn.functional as F
-
+from robolab.core.task.instruction import InstructionInput, instruction_text
 from robolab.core.utils.image_utils import resize_with_pad
 from robolab.eval.base_client import InferenceClient
 from robolab.eval.websocket_transport import MsgPackWebSocketTransport
@@ -113,7 +113,7 @@ class Cosmos3Client(InferenceClient):
             "session_id": f"robolab-episode-{self._eval_episode_idx}-env-{env_id}",
         }
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         """ """
         # Compose wrist, left, and right views into a single frame.
         wrist = extracted_obs["wrist_image"]
@@ -130,7 +130,7 @@ class Cosmos3Client(InferenceClient):
             "observation/image": image,
             "observation/joint_position": extracted_obs["joint_position"],
             "observation/gripper_position": extracted_obs["gripper_position"],
-            "prompt": instruction,
+            "prompt": instruction_text(instruction),
             "session_id": extracted_obs["session_id"],
         }
 

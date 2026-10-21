@@ -36,3 +36,32 @@ def test_common_eval_args_do_not_collide_with_app_launcher():
     assert "rendering_type" in dests
     assert "rendering_mode" in dests
     assert "enable_gt_state" in dests
+    assert "run_index_offset" in dests
+    assert "seed" in dests
+
+
+def test_run_index_offset_defaults_to_zero_and_accepts_an_override():
+    parser = argparse.ArgumentParser()
+    add_common_eval_args(parser)
+
+    assert parser.parse_args([]).run_index_offset == 0
+    assert parser.parse_args(["--run-index-offset", "9"]).run_index_offset == 9
+
+
+def test_seed_defaults_to_zero_and_accepts_an_override():
+    parser = argparse.ArgumentParser()
+    add_common_eval_args(parser)
+
+    assert parser.parse_args([]).seed == 0
+    assert parser.parse_args(["--seed", "1099"]).seed == 1099
+
+
+def test_instruction_type_accepts_zero_one_or_multiple_fields():
+    parser = argparse.ArgumentParser()
+    add_common_eval_args(parser)
+
+    assert parser.parse_args([]).instruction_type is None
+    assert parser.parse_args(["--instruction-type", "vague"]).instruction_type == ["vague"]
+    assert parser.parse_args(
+        ["--instruction-type", "vague", "video"]
+    ).instruction_type == ["vague", "video"]

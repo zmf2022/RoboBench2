@@ -9,6 +9,7 @@
   - [Frames in spatial conditions](#frames-in-spatial-conditions)
   - [Geometric Containment](#geometric-containment)
   - [Contact Force Cone Detection](#contact-force-cone-detection)
+  - [Counting Conditions](#counting-conditions)
 
 ## Run a demo
 
@@ -166,3 +167,53 @@ object_on_top(env, object="orange", reference_object="plate", require_gripper_de
 # Geometric check (e.g., for lifted detection)
 object_above(env, object="orange", reference_object="table", z_margin=0.05)
 ```
+
+### Counting Conditions
+
+Counting conditions test **how many** objects satisfy a placement check, rather
+than whether specific named objects do. They reuse the exact same per-object
+semantics as their boolean counterparts, so counts can never disagree with
+`object_in_container` / `object_on_top`:
+
+| Conditional | Per-object check | Reference |
+|-------------|------------------|-----------|
+| `object_count_in_container` | centroid in open-top convex hull (same as `object_in_container`) | container (bin, bowl, crate) |
+| `object_count_on_surface` | contact force cone + footprint (same as `object_on_top`) | surface (plate, tray, table) |
+
+Both are `@atomic`, usable in `Terminations` and `subtasks`, and support the
+comparisons `"=="` (default), `">="`, `"<="`, `">"`, `"<"` against `count`.
+
+**Candidate objects.** Pass `object=` as a name or list to restrict candidates.
+Omit it (`object=None`) to count **every** entry of the task's
+`contact_object_list` except `ignore_objects` (default `["table"]`) and the
+reference container/surface itself.
+
+```python
+# Success when the grey bin holds exactly 3 objects (any contact object counts)
+success = DoneTerm(
+    func=object_count_in_container,
+    params={"container": "grey_bin", "count": 3, "require_gripper_detached": True},
+)
+
+# Success when at least 2 of the named fruits are on the plate
+success = DoneTerm(
+    func=object_count_on_surface,
+    params={"object": ["apple", "banana", "orange"], "surface": "plate",
+            "count": 2, "comparison": ">=", "require_gripper_detached": True},
+)
+```
+
+For logging or analysis, the underlying counts are available as plain numbers
+(int for `env_id=int`, `Tensor(num_envs,) long` for `env_id=None`) via
+`get_object_count_in_container(env, container, ...)` and
+`get_object_count_on_surface(env, surface, ...)`.
+
+**Relation to `logical="choose"`.** `object_in_container(..., logical="choose", K=3)`
+already expresses "exactly 3 of these named objects are in". The counting
+conditionals generalize this with inequality comparisons and the
+`object=None` default candidate set, and expose the raw count.
+
+**Termination timing.** With `comparison="=="`, the episode terminates the
+moment the count first equals `count`. Set `require_gripper_detached=True`
+(recommended) so an object still held by the gripper while inside the
+container/column doesn't count.

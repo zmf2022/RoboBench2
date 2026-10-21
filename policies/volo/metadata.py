@@ -9,6 +9,8 @@ without any policy-server client library installed.
 
 import numpy as np
 
+from robolab.core.task.instruction import InstructionInput
+
 # An object counts as "lifted" once raised this far (meters) above the
 # position it had when this client first saw it in the episode.
 LIFT_THRESHOLD_M = 0.03
@@ -95,7 +97,7 @@ class OrchestratorMetadataMixin:
             out["gt_state"] = self._derive_gt_fields(gt_state, env_id)
         return out
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         request = super()._pack_request(extracted_obs, instruction)
         request["__episode_id"] = self._eval_episode_idx
         request.update(extracted_obs.get("_orchestrator_keys", {}))

@@ -15,6 +15,11 @@ def get_callable_info(func: Callable) -> tuple[str, dict[str, Any]]:
     """
     Extract function name from a callable function, and return the function name and pre-filled arguments.
     """
+    if isinstance(func, str):
+        # Defensive fallback: a conditional that failed to resolve back to a
+        # callable (e.g. stale/unresolvable replay data) shouldn't crash
+        # printing/logging code that only wants a human-readable label.
+        return func, {}
     if isinstance(func, partial):
         func_name = func.func.__name__
         params = func.keywords

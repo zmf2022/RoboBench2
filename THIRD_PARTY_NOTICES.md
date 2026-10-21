@@ -13,10 +13,13 @@ It depends on the following third-party open-source packages, each governed by i
 | torch | 2.7.0+cu128 | BSD-3-Clause | https://github.com/pytorch/pytorch/blob/main/LICENSE |
 | numpy | 1.26.0 | BSD-3-Clause | https://github.com/numpy/numpy/blob/main/LICENSE.txt |
 | gymnasium | 1.2.0 | MIT | https://github.com/Farama-Foundation/Gymnasium/blob/main/LICENSE |
+| openai | 2.28.0 | Apache-2.0 | https://github.com/openai/openai-python/blob/main/LICENSE |
 | requests | 2.32.3 | Apache-2.0 | https://github.com/psf/requests/blob/main/LICENSE |
 | json-numpy | 2.1.1 | MIT | https://github.com/Crimson-Crow/json-numpy/blob/main/LICENSE.txt |
 | pyzmq | 27.1.0 | BSD-3-Clause | https://github.com/zeromq/pyzmq/blob/main/LICENSE.md |
 | msgpack | 1.1.2 | Apache-2.0 | https://github.com/msgpack/msgpack-python/blob/main/COPYING |
+| msgpack-numpy | 0.4.8 | BSD-3-Clause | https://github.com/lebedov/msgpack-numpy/blob/master/LICENSE.md |
+| websockets | 12.0 / 17.1 | BSD-3-Clause | https://github.com/python-websockets/websockets/blob/main/LICENSE |
 | opencv-python | 4.11.0.86 | MIT | https://github.com/opencv/opencv-python/blob/4.x/LICENSE.txt |
 | pillow | 11.2.1 | HPND (MIT-CMU) | https://github.com/python-pillow/Pillow/blob/main/LICENSE |
 | imageio | 2.37.0 | BSD-2-Clause | https://github.com/imageio/imageio/blob/master/LICENSE |
@@ -74,5 +77,5 @@ RoboLab bundles 3D objects, backgrounds, materials, fixtures, scenes, and robots
 | `assets/fixtures` | CC BY-NC-SA 4.0 | © 2026 NVIDIA Corporation. |
 | `assets/materials` | CC BY-NC-SA 4.0 | © 2026 NVIDIA Corporation. |
 | `assets/scenes` | CC BY-NC-SA 4.0 | © 2026 NVIDIA Corporation. |
-| `assets/robots` | CC BY-NC-SA 4.0 | © 2026 NVIDIA Corporation. |
+| `assets/robots` (except locally licensed subfolders) | CC BY-NC-SA 4.0 | © 2026 NVIDIA Corporation. |
 | `assets/robots/kinova_gen3_robotiq_2f85` | BSD-3-Clause | Derived from [Kinova `ros2_kortex`](https://github.com/Kinovarobotics/ros2_kortex) and [PickNik `ros2_robotiq_gripper`](https://github.com/PickNikRobotics/ros2_robotiq_gripper). See the two license files in the asset directory. |

@@ -5,9 +5,12 @@
 # droid_plus/eval/base_client.py — keep both in sync when editing.
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 import numpy as np
+
+from robolab.core.task.instruction import InstructionInput
 
 
 class InferenceClient(ABC):
@@ -33,9 +36,9 @@ class InferenceClient(ABC):
     different observation sources without duplicating the wire format.
     """
 
-    # Subclasses override to match their server's chunk length.
-    # horizon=1 is correct for single-action servers.
-    open_loop_horizon: int = 1
+    # Positive integers set a fixed replanning interval; None executes each
+    # returned chunk in full. horizon=1 is correct for single-action servers.
+    open_loop_horizon: int | None = 1
 
     def __init__(self) -> None:
         # Per-env chunking state. Subclasses may ignore and manage state however
@@ -44,6 +47,71 @@ class InferenceClient(ABC):
         self._counters: dict[int, int] = {}
         # Set by begin_episode(); see below.
         self._eval_episode_idx: int = 0
+        # ``prepare_episode`` is idempotent until ``reset``. This is the
+        # client-side guard that prevents episode context from being sent more
+        # than once, including after transport reconnects.
+        self._prepared_episode_idx: int | None = None
+
+    def prepare_episode(
+        self,
+        episode_idx: int,
+        available_context: InstructionInput,
+    ) -> None:
+        """Prepare one episode and deliver requested context at most once.
+
+        Called by ``run_episode`` before its first inference request. The
+        client first receives the ordinary :meth:`begin_episode` notification,
+        then declares the available field names it needs through
+        :meth:`requested_context_fields`. Only those values are resolved and
+        passed to :meth:`add_context`.
+
+        A repeated call for the active episode is a no-op. Preparing another
+        episode requires :meth:`reset` first. Context is deliberately never
+        resent after a reconnect; a transport that loses it must fail or
+        restart the episode.
+        """
+        if self._prepared_episode_idx is not None:
+            if self._prepared_episode_idx == episode_idx:
+                return
+            raise RuntimeError(
+                "cannot prepare another episode before resetting the policy client"
+            )
+
+        self.begin_episode(episode_idx)
+
+        if isinstance(available_context, str):
+            fields: Mapping[str, str] = {"default": available_context}
+        else:
+            fields = available_context
+        available_fields = tuple(fields.keys())
+
+        requested = self.requested_context_fields(
+            available_fields,
+            episode_idx=episode_idx,
+        )
+        if requested is None:
+            names: list[str] = []
+        elif isinstance(requested, str):
+            names = [requested]
+        else:
+            names = list(requested)
+
+        if len(names) != len(set(names)):
+            raise ValueError(f"requested context fields must be unique: {names}")
+        missing = [name for name in names if name not in fields]
+        if missing:
+            raise ValueError(
+                f"Requested context field(s) not available: {missing}. "
+                f"Available: {list(available_fields)}"
+            )
+
+        # Mark the episode prepared before invoking transport code. Even if a
+        # send is ambiguous (for example, the acknowledgement is lost), the
+        # base client will not risk sending large context a second time.
+        self._prepared_episode_idx = episode_idx
+        if names:
+            context = {name: fields[name] for name in names}
+            self.add_context(context, episode_idx=episode_idx)
 
     def begin_episode(self, episode_idx: int) -> None:
         """Notify the client that a new episode is starting.
@@ -57,8 +125,39 @@ class InferenceClient(ABC):
         """
         self._eval_episode_idx = episode_idx
 
+    def requested_context_fields(
+        self,
+        available_fields: tuple[str, ...],
+        *,
+        episode_idx: int,
+    ) -> str | Iterable[str] | None:
+        """Return context field names needed before the episode starts.
 
-    def infer(self, obs: Any, instruction: str, *, env_id: int = 0) -> dict:
+        The default requests nothing, preserving existing clients. A client
+        may return a static selection or ask its server during this hook. It
+        receives names only, so inspecting availability does not count as
+        using a field.
+        """
+        return ()
+
+    def add_context(
+        self,
+        context: Mapping[str, str],
+        *,
+        episode_idx: int,
+    ) -> None:
+        """Deliver requested context once, before the first inference call.
+
+        Context-aware clients override this to populate local policy state or
+        send one transport message. The base raises rather than silently
+        dropping context when a subclass requests fields without implementing
+        delivery.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} requested context but does not implement add_context"
+        )
+
+    def infer(self, obs: Any, instruction: InstructionInput, *, env_id: int = 0) -> dict:
         """Return ``{"action": np.ndarray, "viz": np.ndarray | None}``.
 
         Default flow: extract -> pack -> query -> unpack -> postprocess ->
@@ -79,7 +178,7 @@ class InferenceClient(ABC):
         return {"action": action, "viz": viz}
 
     def infer_batch(
-        self, obs: Any, instruction: str, *, env_ids: list[int]
+        self, obs: Any, instruction: InstructionInput, *, env_ids: list[int]
     ) -> dict[int, dict]:
         """Infer actions for several envs in one call.
 
@@ -104,6 +203,7 @@ class InferenceClient(ABC):
         if env_id is None:
             self._chunks.clear()
             self._counters.clear()
+            self._prepared_episode_idx = None
         else:
             self._chunks.pop(env_id, None)
             self._counters.pop(env_id, None)
@@ -129,8 +229,8 @@ class InferenceClient(ABC):
         """
 
     @abstractmethod
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> Any:
-        """Build the server's wire-format request. Backend-specific."""
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> Any:
+        """Build the server request from a string or tracked field mapping."""
 
     @abstractmethod
     def _query_server(self, request: Any) -> Any:
@@ -205,9 +305,18 @@ class InferenceClient(ABC):
     # ------------------------------------------------------------------
 
     def _needs_refresh(self, env_id: int) -> bool:
-        return env_id not in self._chunks or self._counters[env_id] >= self.open_loop_horizon
+        horizon = self.open_loop_horizon
+        if horizon is not None and (type(horizon) is not int or horizon < 1):
+            raise ValueError("open_loop_horizon must be a positive integer or None")
+        if env_id not in self._chunks:
+            return True
+        if horizon is None:
+            horizon = len(self._chunks[env_id])
+        return self._counters[env_id] >= horizon
 
     def _set_chunk(self, env_id: int, chunk: np.ndarray) -> None:
+        if len(chunk) == 0:
+            raise ValueError("Action chunk must contain at least one action")
         self._chunks[env_id] = chunk
         self._counters[env_id] = 0
 

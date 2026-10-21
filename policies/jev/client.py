@@ -49,6 +49,7 @@ from policies.vlm_agent.token_controller import (
 )
 from policies.vlm_pinpoint.pointing_controller import yaw_aligned_quat
 from robolab.core.observations.observation_utils import unpack_proprio_obs
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 logger = logging.getLogger(__name__)
@@ -274,7 +275,7 @@ class JevClient(InferenceClient):
         if env.rest_z is None:
             env.rest_z = float(obj_pos[2])
         return build_state(
-            task=instruction or "",
+            task=instruction_text(instruction) if instruction else "",
             task_id=self.task_id,
             state_id=f"{self.episode_id}:{env_id}:{env.generation}:{env.step_id}",
             step_id=env.step_id,

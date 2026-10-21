@@ -21,7 +21,7 @@ import glob
 import os
 
 import pytest
-from pxr import Usd, UsdGeom
+from pxr import Usd, UsdGeom, UsdPhysics
 
 from robolab.constants import SCENE_DIR
 
@@ -75,3 +75,24 @@ def test_every_scene_authors_locked_ground():
             wrong.append(f"{name}: {ground_z} (expected {expected_z})")
     assert not missing, f"scenes without /GroundPlane: {missing}"
     assert not wrong, f"scenes with wrong ground height: {wrong}"
+
+
+@pytest.mark.parametrize("name", [
+    "cleaning_products.usda",
+    "shelf_with_cleaning_products.usda",
+    "shelf_with_cleaning_products2.usda",
+])
+def test_cleaning_scene_floor_does_not_occlude_background(name):
+    """The physical floor must remain active without hiding the dome panorama."""
+    stage = Usd.Stage.Open(os.path.join(SCENE_DIR, name), load=Usd.Stage.LoadNone)
+    ground = stage.GetDefaultPrim().GetChild("GroundPlane")
+    mesh = ground.GetChild("CollisionMesh")
+    assert mesh.IsA(UsdGeom.Mesh)
+    assert UsdGeom.Imageable(mesh).ComputeVisibility() == UsdGeom.Tokens.invisible
+
+    plane = ground.GetChild("CollisionPlane")
+    assert plane.IsActive()
+    assert plane.HasAPI(UsdPhysics.CollisionAPI)
+    assert UsdPhysics.CollisionAPI(plane).GetCollisionEnabledAttr().Get()
+    transform = UsdGeom.Xformable(plane).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+    assert transform.ExtractTranslation()[2] == pytest.approx(CANONICAL_GROUND_Z)

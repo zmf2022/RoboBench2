@@ -134,14 +134,21 @@ def _overlay(obj, data: dict, ns: str, skipped: list[str]) -> None:
                 continue
             target = getattr(obj, key)
 
-        # The recorded instruction is the resolved string; the current config may
-        # still hold the pre-resolution variants dict. Faithful replay keeps the
-        # recorded string (create_env's resolve_instruction passes strings through).
-        if key_ns == "/instruction" and isinstance(value, str):
+        # Instructions are runtime-selected values: legacy recordings contain a
+        # string and newer recordings contain the exact exposed field mapping.
+        # Replace atomically so replay never merges unselected current fields.
+        if key_ns == "/instruction" and isinstance(value, (str, dict)):
             _assign(obj, key, value)
             continue
 
         if isinstance(value, dict):
+            # Subtask.conditions holds (callable, score) tuples serialized as
+            # str(functools.partial(...)) reprs — not dotted import paths, so
+            # they can't be resolved back to callables. The freshly built task
+            # config already has the correct conditions; keep them as-is.
+            if key == "conditions":
+                skipped.append(f"{key_ns} (subtask conditions carry code; keeping current callables)")
+                continue
             if isinstance(target, dict) or hasattr(target, "__dict__"):
                 _overlay(target, value, key_ns, skipped)
             else:

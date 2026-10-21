@@ -18,6 +18,7 @@ import json_numpy
 import numpy as np
 import requests
 
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 ACTION_CHUNK_SIZE = 15
@@ -129,7 +130,7 @@ class MolmoAct2DroidClient(InferenceClient):
         return {
             "external_cam": self._as_rgb_uint8(extracted_obs["external_cam"]),
             "wrist_cam": self._as_rgb_uint8(extracted_obs["wrist_cam"]),
-            "instruction": str(instruction),
+            "instruction": instruction_text(instruction),
             "state": state,
         }
 

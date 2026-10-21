@@ -2,9 +2,18 @@
 
 ## Unreleased
 
+- Integrated NVIDIA RoboLab v0.3.2 through main commit
+  `b6cfcf6ccd2113c4cd1216d35b33024a7d5691da`, retaining the Verified scoring,
+  recording, local policy backends, and Isaac Sim 6 / Isaac Lab 3 compatibility.
+- Adapted local policy clients to tracked instruction fields so model requests
+  receive the selected text and result records track which field was used.
+- The cleaning-products shelf keeps the local object placement while taking
+  upstream's ground-visibility fix. Dependency locks cover all three Isaac stacks.
+
+
 ## [verified-unreleased] - RoboLab Verified
 
-A fork of NVIDIA RoboLab v0.3.1 focused on evaluation correctness. Every entry below
+A fork of NVIDIA RoboLab v0.3.2 focused on evaluation correctness. Every entry below
 is one commit with its own evidence; [`docs/verified/changes.md`](docs/verified/changes.md)
 carries the measurement behind each, [`docs/verified/migration.md`](docs/verified/migration.md)
 the schema and vocabulary diff for downstream tools.
@@ -51,6 +60,30 @@ the schema and vocabulary diff for downstream tools.
   `FRANKA_PANDA_HIGH_PD_CFG`, and gravity-off is the stand-in for the real
   controller's gravity compensation (`docs/physics.md`).
 
+
+## [0.3.2] - 2026-10-18
+
+### Added
+
+- Astranomy Direct-API and Codex Agent-EEF policy backends, with configurable
+  model access, action representations, history selection, and inference logs.
+- Optional episode context sent once before inference, allowing compatible
+  policy clients to use video demonstrations for in-context learning (ICL).
+- Object-counting task predicates, multiple tracked instruction fields, and
+  support for multi-articulation end-effector recording and gripper labels.
+
+### Changed
+
+- Cosmos3 supports full WebSocket URIs, optional Bearer authentication, and
+  separate policy sessions for parallel environments. Cosmos3 and DreamZero
+  share a MsgPack/NumPy WebSocket transport.
+- Batched policy replans are divided into bounded per-request environment
+  groups.
+
+### Fixed
+
+- Ground meshes no longer occlude cleaning-scene backgrounds.
+- Recorded subtask conditionals resolve correctly during replay.
 
 ## [0.3.1] - 2026-08-11
 
@@ -189,6 +222,7 @@ Initial public release: 100+ benchmark tasks,
 DROID and Franka embodiments, server-client policy evaluation (Pi0 family,
 GR00T, DreamZero), and HDF5 episode recording with analysis tools.
 
+[0.3.2]: https://github.com/NVlabs/RoboLab/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/NVlabs/RoboLab/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/NVlabs/RoboLab/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/NVlabs/RoboLab/compare/v0.2.0...v0.2.1

@@ -44,7 +44,7 @@ def fix_absolute_paths_in_usd(usd_path: Path, dry_run: bool = False) -> tuple[bo
     """
     Replace absolute paths with relative paths in USD file, only if the file exists locally.
     Checks if the file exists in OBJECT_DIR/vomp/<object_name>/... before replacing.
-    Replaces patterns like '/home/rdagli/code/datasets/simready/simready_content/common_assets/props/<object_name>/'
+    Replaces absolute source paths ending in '/simready_content/common_assets/props/<object_name>/'
     with './' only if the file exists locally.
 
     Args:
@@ -66,7 +66,7 @@ def fix_absolute_paths_in_usd(usd_path: Path, dry_run: bool = False) -> tuple[bo
     object_dir = usd_path.parent
 
     # Pattern to search for
-    old_pattern = f"/home/rdagli/code/datasets/simready/simready_content/common_assets/props/{object_name}/"
+    old_pattern = f"/simready_content/common_assets/props/{object_name}/"
 
     changes_made = False
     missing_files = []
@@ -74,7 +74,7 @@ def fix_absolute_paths_in_usd(usd_path: Path, dry_run: bool = False) -> tuple[bo
     # Helper function to check and replace path
     def check_and_replace_path(path_str: str):
         """Check if file exists and return (should_replace, new_path)"""
-        if old_pattern not in path_str:
+        if not path_str.startswith("/") or old_pattern not in path_str:
             return False, path_str
 
         # Extract the relative part after the old pattern
@@ -83,7 +83,7 @@ def fix_absolute_paths_in_usd(usd_path: Path, dry_run: bool = False) -> tuple[bo
         # Check if file exists in the object directory
         target_file = object_dir / relative_part
         if target_file.exists():
-            new_path = path_str.replace(old_pattern, "./")
+            new_path = "./" + relative_part
             return True, new_path
         else:
             # Store the full original path

@@ -70,12 +70,32 @@ class BaseRecorderManagerCfg(RecorderManagerBaseCfg):
     record_subtask_completion: SubtaskCompletionRecorderCfg | None = None
     dataset_export_mode: DatasetExportMode = DatasetExportMode.EXPORT_ALL
 
+def resolve_ee_body_label(value: str | dict) -> tuple[str, str]:
+    """Resolve one ``ee_recorder_bodies`` value to ``(articulation name, body name)``.
+
+    A bare string names a body on the primary ``robot`` articulation. The
+    explicit dict form ``{"asset": <articulation>, "body": <body>}`` selects a
+    body on another articulation — required for multi-articulation embodiments
+    (see docs/robots.md). ``"asset"`` is optional and defaults to ``"robot"``.
+    """
+    if isinstance(value, str):
+        return "robot", value
+    if not isinstance(value, dict):
+        raise TypeError(f"ee_recorder_bodies values must be str or dict, got {type(value).__name__}: {value!r}")
+    unknown_keys = set(value) - {"asset", "body"}
+    if unknown_keys:
+        raise ValueError(f"Unknown ee_recorder_bodies keys {sorted(unknown_keys)}; expected 'asset' and 'body'")
+    if "body" not in value:
+        raise ValueError(f"ee_recorder_bodies dict entry is missing 'body': {value!r}")
+    return value.get("asset", "robot"), value["body"]
+
+
 def create_recorder_config(
     include_policy_observations: bool = False,
     include_subtask_tracking: bool = False,
     export_dir: str | None = None,
     filename: str = "data.hdf5",
-    ee_recorder_bodies: dict[str, str] | None = None,
+    ee_recorder_bodies: dict[str, str | dict] | None = None,
 ) -> RecorderManagerBaseCfg:
     """Factory function to create appropriate recorder configuration.
 
@@ -84,9 +104,12 @@ def create_recorder_config(
         include_subtask_tracking: Whether to track subtask completion
         export_dir: Directory to export data to
         filename: Name of the output file
-        ee_recorder_bodies: Mapping of HDF5 channel name -> EE body name, one
-            recorder term per entry. Required; sourced from the robot cfg's
-            ``ee_recorder_bodies`` label. Pass ``{}`` to disable EE-pose recording.
+        ee_recorder_bodies: Mapping of HDF5 channel name -> EE body, one
+            recorder term per entry. Values are a body name on the primary
+            ``robot`` articulation, or ``{"asset": ..., "body": ...}`` to record
+            from another articulation (see ``resolve_ee_body_label``). Required;
+            sourced from the robot cfg's ``ee_recorder_bodies`` label. Pass
+            ``{}`` to disable EE-pose recording.
 
     Returns:
         Configured RecorderManagerBaseCfg instance
@@ -108,11 +131,16 @@ def create_recorder_config(
 
     # One EE-pose recorder per channel. RecorderManager._prepare_terms iterates
     # the cfg instance __dict__, so setattr-attached terms are instantiated.
-    for record_key, ee_body_name in ee_recorder_bodies.items():
+    for record_key, body_label in ee_recorder_bodies.items():
+        robot_cfg_name, ee_body_name = resolve_ee_body_label(body_label)
         setattr(
             config,
             f"record_{record_key}",
-            PostStepEndEffectorPoseRecorderCfg(record_key=record_key, ee_body_name=ee_body_name),
+            PostStepEndEffectorPoseRecorderCfg(
+                record_key=record_key,
+                ee_body_name=ee_body_name,
+                robot_cfg_name=robot_cfg_name,
+            ),
         )
 
     # Conditionally add policy observations

@@ -23,7 +23,7 @@ from robolab.constants import get_output_dir
 from robolab.core.environments.config import parse_env_cfg
 from robolab.core.environments.env import RobolabEnv
 from robolab.core.events.utils import merge_events_cfg
-from robolab.core.task.task import resolve_instruction
+from robolab.core.task.instruction import primary_instruction, select_instruction_fields
 from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict, prepare_env_cfg
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def create_env(scene: str | ManagerBasedEnvCfg,
                lookat=None,
                use_fabric=True,
                events=None,
-               instruction_type="default",
+               instruction_type=None,
                policy=None,
                renderer="realtime",
                rendering_mode=None,
@@ -129,9 +129,10 @@ def create_env(scene: str | ManagerBasedEnvCfg,
         events: Event configuration to add to the environment. Can be:
             - A dict of {event_name: EventTerm} (automatically converted to configclass)
             - A configclass instance with EventTerm attributes
-        instruction_type: Which instruction variant to use when the task defines
-            instruction as a dict (e.g., "default", "vague", "specific"). Ignored
-            when instruction is a plain string. Defaults to "default".
+        instruction_type: Optional instruction field name or names to expose to
+            the policy (e.g., ``"vague"`` or ``["vague", "video"]``). When
+            omitted, all fields are exposed. Plain-string tasks are normalized
+            to a sole ``default`` field.
         policy: Policy backend name (e.g., "pi0", "gr00t"). Stored on env_cfg
             so downstream code (e.g., run_episode) can read it.
         renderer: RTX renderer mode, "realtime" (RaytracedLighting, default) or
@@ -167,7 +168,7 @@ def create_env(scene: str | ManagerBasedEnvCfg,
             )
 
             env_cfg._instruction_variants = env_cfg.instruction
-            env_cfg.instruction = resolve_instruction(env_cfg.instruction, instruction_type)
+            env_cfg.instruction = select_instruction_fields(env_cfg.instruction, instruction_type)
 
             # Configure the RTX renderer before the sim context is created.
             _apply_render_settings(env_cfg, renderer, rendering_mode)
@@ -204,7 +205,7 @@ def create_env(scene: str | ManagerBasedEnvCfg,
         env_cfg = scene
 
         env_cfg._instruction_variants = env_cfg.instruction
-        env_cfg.instruction = resolve_instruction(env_cfg.instruction, instruction_type)
+        env_cfg.instruction = select_instruction_fields(env_cfg.instruction, instruction_type)
 
         # Configure the RTX renderer before the sim context is created.
         _apply_render_settings(env_cfg, renderer, rendering_mode)
@@ -241,10 +242,16 @@ def create_env(scene: str | ManagerBasedEnvCfg,
 
     from robolab.core.utils.print_utils import print_env_info
     env_name = scene if isinstance(scene, str) else env_cfg.__class__.__name__
+    _, display_instruction = primary_instruction(env_cfg.instruction)
+    instruction_type_display = (
+        "all" if instruction_type is None
+        else instruction_type if isinstance(instruction_type, str)
+        else ", ".join(instruction_type)
+    )
     print_env_info(
         env_name=env_name,
-        instruction=env_cfg.instruction,
-        instruction_type=instruction_type,
+        instruction=display_instruction,
+        instruction_type=instruction_type_display,
         seed=env_cfg.seed,
         policy=policy or "",
         scene_name=env_cfg.scene.__class__.__name__,

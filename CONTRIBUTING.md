@@ -26,7 +26,7 @@ Everything else — new robots, backgrounds, scenes, tooling — follows the ups
 
 RoboLab is a research project developed and maintained by the [Seattle Robotics Lab (SRL)](https://research.nvidia.com/labs/srl/) at NVIDIA Research, with contributions from across NVIDIA.
 
-NVIDIA contributors: Xuning Yang, Rishit Dagli, Jonathan Tremblay, Yu-Wei Chao, Alperen Degirmenci, Liang Hao, Fabio Ramos, Alex Zook, Siyi Chen, Renato Gasoto, Xiaotong Chen, Valts Blukis, Shun Zhang.
+NVIDIA contributors: Xuning Yang, Rishit Dagli, Jonathan Tremblay, Yu-Wei Chao, Alperen Degirmenci, Liang Hao, Fabio Ramos, Alex Zook, Siyi Chen, Renato Gasoto, Xiaotong Chen, Valts Blukis, Ashna Khetan, Shun Zhang, Maciej Bala.
 
 We thank the following additional contributors for their help in building RoboLab: Arhan Jain, Karl Pertsch.
 
@@ -50,7 +50,25 @@ Please open an Issue to discuss **before** starting work on:
 - Changes to existing robots, tasks, or scenes that would alter benchmark results.
 - Dependency or simulator-stack changes.
 
-We cannot accept: commits without DCO sign-off, assets without a license, or new Python files without the standard SPDX header (Apache-2.0 — copy it from any existing file).
+We cannot accept: commits without DCO sign-off, assets without a license, or new Python files without the standard SPDX header (see below).
+
+### SPDX headers
+
+Every new Python file must start with the project's standard header, regardless of author:
+
+```python
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+```
+
+The header is uniform project boilerplate — your DCO sign-off (below) is what certifies your right to submit the contribution under Apache-2.0. Do not substitute your own copyright line.
+
+### No hacks
+
+If core code can be updated to support your use case, do not write hacks (wrappers,
+monkey-patches, or copy-pasted variants that work around a core limitation). Instead,
+write backward-compatible core code updates to support your feature, and add
+documentation for it.
 
 ### PRs
 1. Fork the repository and create your branch from main.

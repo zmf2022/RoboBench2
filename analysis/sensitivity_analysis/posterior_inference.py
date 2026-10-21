@@ -1097,7 +1097,7 @@ def main(use_real_data=False, csv_file=None,
 
     # Join parts with underscores and add extension
     filename = '_'.join(filename_parts) + '.png'
-    output_file = f'/home/framos/Code/robolab/analysis/{filename}'
+    output_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), filename)
 
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"\n  ✓ Saved visualization: {filename}")

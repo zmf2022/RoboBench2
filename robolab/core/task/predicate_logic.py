@@ -109,6 +109,52 @@ def evaluate_spatial_condition(
         return result
 
 
+def count_matching_objects(
+    env,
+    objects: list[str],
+    condition_func: Callable,
+    env_id: int | None = None,
+):
+    """Count how many of ``objects`` satisfy ``condition_func``.
+
+    Args:
+        env: Environment or WorldState
+        objects: Candidate object names to test.
+        condition_func: ``(world, obj, env_id=...) -> bool | Tensor(N,) bool`` —
+            the same shape used by evaluate_spatial_condition.
+        env_id: None → Tensor(num_envs,) long; int → int.
+
+    Returns:
+        Per-env count of objects for which the condition holds.
+    """
+    world = get_world(env)
+    if env_id is not None:
+        return sum(bool(condition_func(world, obj, env_id=env_id)) for obj in objects)
+    if not objects:
+        return torch.zeros(world.env.num_envs, dtype=torch.long, device=world.env.device)
+    results = torch.stack([condition_func(world, obj, env_id=None) for obj in objects], dim=0)  # (num_objs, N)
+    return results.sum(dim=0).long()  # (N,)
+
+
+def compare_count(count, target: int, comparison: str):
+    """Compare a count (int or Tensor(N,) long) against ``target``.
+
+    Supported comparisons: '==', '>=', '<=', '>', '<'.
+    Returns bool for int counts, Tensor(N,) bool for tensor counts.
+    """
+    ops = {
+        "==": lambda c: c == target,
+        ">=": lambda c: c >= target,
+        "<=": lambda c: c <= target,
+        ">": lambda c: c > target,
+        "<": lambda c: c < target,
+    }
+    if comparison not in ops:
+        raise ValueError(f"Invalid comparison '{comparison}'; expected one of {sorted(ops)}")
+    result = ops[comparison](count)
+    return result if isinstance(result, torch.Tensor) else bool(result)
+
+
 #########################################################
 # Helpers for dual scalar/tensor logic
 #########################################################
@@ -268,7 +314,7 @@ def _read_local_mesh_points(world, body_name: str) -> np.ndarray:
     prim_world_to_local = prim_xform_no_scale.GetInverse()
 
     all_points: list[list[float]] = []
-    # Instanceable SimReady assets keep geometry in an instanced prototype.
+    # Instanceable USD assets keep geometry in an instanced prototype.
     # Traverse proxies so containment hulls work for bowls, baskets, and crates.
     for child in Usd.PrimRange(prim, Usd.TraverseInstanceProxies()):
         if not child.IsA(UsdGeom.Mesh):

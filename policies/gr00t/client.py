@@ -10,6 +10,7 @@ import msgpack_numpy as mnp
 import numpy as np
 import zmq
 
+from robolab.core.task.instruction import InstructionInput, instruction_text
 from robolab.eval.base_client import InferenceClient
 
 # GR00T DROID images are sent as HWC uint8 at 180x320, then the N1.7 processor
@@ -236,7 +237,7 @@ class GR00TDroidJointposClient(InferenceClient):
             "eef_9d": compute_eef_9d(eef_position, eef_quat),
         }
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         ext_image = resize_no_pad(extracted_obs["external_image"], RESOLUTION[0], RESOLUTION[1])
         wrist_image = resize_no_pad(extracted_obs["wrist_image"], RESOLUTION[0], RESOLUTION[1])
         return {
@@ -245,7 +246,7 @@ class GR00TDroidJointposClient(InferenceClient):
             "state.eef_9d": extracted_obs["eef_9d"][None, None, ...].astype(np.float32),
             "state.joint_position": extracted_obs["joint_position"][None, None, ...].astype(np.float32),
             "state.gripper_position": extracted_obs["gripper_position"][None, None, ...].astype(np.float32),
-            "annotation.language.language_instruction": [instruction],
+            "annotation.language.language_instruction": [instruction_text(instruction)],
         }
 
     def _query_server(self, request: dict) -> tuple:

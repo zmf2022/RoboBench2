@@ -82,6 +82,7 @@ from episodes import run_prerecorded_episode_hdf5 # noqa
 from robolab.core.environments.config import parse_env_cfg # noqa
 from robolab.core.replay import apply_recorded_env_cfg, load_recorded_env_cfg # noqa
 from robolab.core.environments.runtime import create_env, end_episode # noqa
+from robolab.core.task.instruction import primary_instruction # noqa
 from robolab.registrations.droid.auto_env_registrations_jointpos import auto_register_droid_envs # noqa
 from robolab.core.environments.factory import get_envs # noqa
 from robolab.constants import get_timestamp # noqa
@@ -158,13 +159,14 @@ def main():
             device=args_cli.device,
             num_envs=args_cli.num_envs,
             use_fabric=True)
+        _, display_instruction = primary_instruction(env_cfg.instruction)
 
         # Can be used to loop through multiple episodes; run identifiers (logs,
         # exported run_<i>.hdf5, episode ids) follow the selected demo index.
         for i in [args_cli.episode]:
 
             run_name = task_env + f"_run{i}"
-            print(f"Running {run_name}: '{env_cfg.instruction}'")
+            print(f"Running {run_name}: '{display_instruction}'")
 
             env_results, msgs = run_prerecorded_episode_hdf5(env,
                 hdf5_path=hdf5_path,
@@ -199,7 +201,7 @@ def main():
                     "env_id": r['env_id'],
                     "success": r['success'],
                     "step": r['step'],
-                    "instruction": env_cfg.instruction,
+                    "instruction": display_instruction,
                 }
 
                 if robolab.constants.ENABLE_SUBTASK_PROGRESS_CHECKING:

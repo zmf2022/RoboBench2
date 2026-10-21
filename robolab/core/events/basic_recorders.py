@@ -158,9 +158,20 @@ class PostStepEndEffectorPoseRecorder(RecorderTerm):
                             self._ee_body_idx = i
                             break
                     if self._ee_body_idx is None:
-                        print(f"[PostStepEndEffectorPoseRecorder] Body '{self._ee_body_name}' not found. Available: {body_names}")
+                        # A misconfigured label must fail loudly: silently
+                        # returning None here would drop the channel and every
+                        # downstream metric with it.
+                        raise ValueError(
+                            f"[{self._record_key}] EE body '{self._ee_body_name}' not found on "
+                            f"articulation '{self._robot_cfg_name}'. Available bodies: {body_names}. "
+                            "Check the robot cfg's ee_recorder_bodies label (docs/robots.md)."
+                        )
             else:
-                print(f"[PostStepEndEffectorPoseRecorder] Robot '{self._robot_cfg_name}' not found in scene.")
+                raise ValueError(
+                    f"[{self._record_key}] Articulation '{self._robot_cfg_name}' not found in scene "
+                    f"(articulations: {sorted(self._env.scene.articulations)}). "
+                    "Check the robot cfg's ee_recorder_bodies label (docs/robots.md)."
+                )
 
         if self._robot is None or self._ee_body_idx is None:
             return None, None
@@ -393,7 +404,9 @@ class PostStepEndEffectorPoseRecorderCfg(RecorderTermCfg):
     Uses the articulation's body state directly (no FrameTransformer needed).
 
     Attributes:
-        robot_cfg_name: Name of the robot articulation in the scene. Default: "robot"
+        robot_cfg_name: Name of the robot articulation in the scene. Default: "robot";
+            multi-articulation embodiments set it per channel via the dict form of
+            the ``ee_recorder_bodies`` label (``{"asset": ..., "body": ...}``).
         ee_body_name: Name of the end effector body to record. Required; sourced
             from the robot cfg's ``ee_recorder_bodies`` label (see docs/robots.md).
         record_key: HDF5 channel name to record under (e.g. "ee_pose"). Required.

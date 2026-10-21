@@ -27,6 +27,7 @@ from robolab.core.logging.results import (
     update_experiment_results,
 )
 from robolab.core.metrics import compute_episode_metrics, load_demo_data
+from robolab.core.task.instruction import primary_instruction
 from robolab.core.task.status import EVENT_STATUS_CODES, StatusCode, get_status_name
 from robolab.core.utils.file_utils import load_file
 
@@ -93,6 +94,15 @@ def _tally_events(events: list[dict]) -> dict:
     return out
 
 
+def _nonconflicting_episode_metadata(env_result: dict, reserved: set[str]) -> dict:
+    """Return non-conflicting policy fields captured at episode shutdown."""
+
+    fields = env_result.get("episode_metadata")
+    if not isinstance(fields, dict):
+        return {}
+    return {key: value for key, value in fields.items() if isinstance(key, str) and key not in reserved}
+
+
 def extract_events_from_log(log_file: str) -> dict:
     """Read a per-env JSON log (v1 or v2) and tally occurrences of each event
     name. For ``WRONG_OBJECT_GRABBED_FAILURE``,
@@ -140,7 +150,7 @@ def build_run_summary(
     events_list: list[dict],
     final_info: dict | None,
     enable_subtask_progress: bool,
-    instruction_type: str | None = None,
+    instruction_type: str | list[str] | None = None,
     timing: dict | None = None,
     task_name: str | None = None,
     extra_fields: dict | None = None,
@@ -155,6 +165,7 @@ def build_run_summary(
     """
     episode_id = run_idx * num_envs + env_id
 
+    _, display_instruction = primary_instruction(env_cfg.instruction)
     summary: dict = {
         "env_name": task_env,
         "task_name": task_name if task_name is not None else env_cfg._task_name,
@@ -163,7 +174,7 @@ def build_run_summary(
         "episode": episode_id,
         "env_id": env_id,
         "policy": policy,
-        "instruction": env_cfg.instruction,
+        "instruction": display_instruction,
         "attributes": env_cfg._task_attributes,
         "success": env_result["success"],
         "episode_step": env_result["step"],
@@ -179,10 +190,24 @@ def build_run_summary(
         "metrics": traj_metrics or {},
         "events": events or {},
     }
-    if instruction_type is not None:
-        summary["instruction_type"] = instruction_type
+    fields = env_result.get("instruction_fields")
+    fields_used = env_result.get("instruction_fields_used")
+    if fields is not None:
+        summary["instruction_fields"] = fields
+    if fields_used is not None:
+        summary["instruction_fields_used"] = fields_used
+    # Preserve the historical scalar only when one field identifies the run.
+    legacy_type = instruction_type
+    if fields_used:
+        legacy_type = fields_used[0] if len(fields_used) == 1 else None
+    elif isinstance(legacy_type, list):
+        legacy_type = legacy_type[0] if len(legacy_type) == 1 else None
+    if legacy_type is not None:
+        summary["instruction_type"] = legacy_type
     if timing is not None:
         summary["timing"] = timing
+
+    summary.update(_nonconflicting_episode_metadata(env_result, set(summary)))
 
     if enable_subtask_progress:
         # Score: HDF5 subtask/score[final_step] is canonical (matches
@@ -242,7 +267,7 @@ def summarize_run(
     episode_results_file: str,
     enable_subtask_progress: bool = False,
     timing: dict | None = None,
-    instruction_type: str | None = None,
+    instruction_type: str | list[str] | None = None,
     task_name: str | None = None,
     extra_fields: dict | None = None,
 ) -> dict:
@@ -288,6 +313,11 @@ def summarize_run(
             "final_step": r.get("step"),
             "events": events,
         }
+        if r.get("instruction_fields") is not None:
+            log_obj["instruction_fields"] = r["instruction_fields"]
+        if r.get("instruction_fields_used") is not None:
+            log_obj["instruction_fields_used"] = r["instruction_fields_used"]
+        log_obj.update(_nonconflicting_episode_metadata(r, set(log_obj)))
         log_file = os.path.join(scene_output_dir, f"log_{run_idx}_env{eid}.json")
         dump_results_to_file(log_file, log_obj, append=False)
         per_env_events[eid] = _tally_events(events)

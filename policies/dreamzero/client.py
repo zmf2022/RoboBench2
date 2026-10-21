@@ -25,6 +25,7 @@ import uuid
 
 import numpy as np
 
+from robolab.core.task.instruction import InstructionInput, instruction_text
 from robolab.eval.base_client import InferenceClient
 from robolab.eval.websocket_transport import MsgPackWebSocketTransport
 
@@ -133,7 +134,7 @@ class DreamZeroClient(InferenceClient):
             "session_id": self._env_session_id[env_id],
         }
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         right_resized = self._resize_image(extracted_obs["right_image"], self.image_height, self.image_width)
         right_resized_2 = self._resize_image(extracted_obs["right_image_2"], self.image_height, self.image_width)
         wrist_resized = self._resize_image(extracted_obs["wrist_image"], self.image_height, self.image_width)
@@ -144,7 +145,7 @@ class DreamZeroClient(InferenceClient):
             "observation/joint_position": extracted_obs["joint_position"],
             "observation/cartesian_position": np.zeros(6, dtype=np.float32),
             "observation/gripper_position": extracted_obs["gripper_position"],
-            "prompt": instruction,
+            "prompt": instruction_text(instruction),
             "session_id": extracted_obs["session_id"],
             "endpoint": "infer",
         }

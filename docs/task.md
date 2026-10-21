@@ -172,7 +172,9 @@ The `params` dict names must match the object names in `contact_object_list`. Se
 
 ## Instruction Variants
 
-A task can define a single instruction or multiple variants for evaluation under different levels of ambiguity.
+A task can define a single instruction or multiple flat instruction fields. A
+field value is always a string, but the string may represent text, a file path,
+or a URL; each policy decides how to interpret it.
 
 **Single instruction:**
 
@@ -182,7 +184,7 @@ class MyTask(Task):
     instruction: str = "Pick up the banana and place it on the plate"
 ```
 
-**Multiple variants:**
+**Multiple fields:**
 
 ```python
 @dataclass
@@ -191,16 +193,27 @@ class MyTask(Task):
     instruction = {
         "default": "Pick up the banana and place it on the plate",
         "vague": "Put stuff on the plate",
-        "specific": "Grasp the yellow banana by its middle section and place it in the center of the white ceramic plate",
+        "video": "assets/demos/banana_to_plate.mp4",
     }
 ```
 
-At runtime, a single variant is selected via the `--instruction-type` flag. Resolution order:
-1. If the requested `instruction_type` key exists, use it.
-2. Otherwise fall back to `"default"`.
-3. If neither exists, raise a `ValueError`.
+At runtime, `env_cfg.instruction` is a dictionary containing all fields. A
+policy can retrieve any value as a normal string, for example
+`instruction["vague"]` or `instruction["video"]`. During evaluation, those
+lookups are automatically recorded in `instruction_fields_used`.
 
-Tasks with a single string instruction are fully backward compatible — `instruction_type` is ignored.
+`--instruction-type vague video` limits which fields are exposed. Omitting the
+flag exposes all fields. Requested fields that the policy never reads remain in
+`instruction_fields`, but not `instruction_fields_used`.
+
+Instruction fields are opaque policy context. RoboLab does not infer behavior
+from names such as `default`, `video`, or `demo`. Context-aware policy clients
+can request selected fields once before inference starts; see
+[Evaluating a New Policy — Episode Context](policy.md#optional-send-episode-context-once).
+
+Tasks that still define a single string are supported and exposed as
+`{"default": <the string>}`. Built-in text policies select `default` (or the
+first exposed field), then send the resulting plain string to their model.
 
 See [environment_run.md](environment_run.md) for how to select an instruction type at runtime.
 
@@ -273,7 +286,7 @@ env, env_cfg = create_env(env_name, device=device, num_envs=1)
 
 task_name = env_cfg._task_name        # e.g., "BananaInBowlTask"
 attributes = env_cfg._task_attributes  # e.g., ['specific', 'recognition']
-instruction = env_cfg.instruction      # resolved language instruction string
+instruction = env_cfg.instruction      # flat dict of exposed instruction fields
 ```
 
 ## Managing a Task Library

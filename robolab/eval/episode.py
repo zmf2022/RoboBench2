@@ -24,6 +24,7 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
+
 class TimingStats:
     """Simple timing utility for profiling code sections."""
 
@@ -53,6 +54,7 @@ class TimingStats:
 from robolab.constants import VISUALIZE, get_output_dir
 from robolab.core.logging.results import get_all_env_subtask_infos
 from robolab.core.observations.observation_utils import unpack_image_obs, unpack_viewport_cams
+from robolab.core.task.instruction import TrackedInstructionFields, primary_instruction
 from robolab.core.utils.video_utils import VideoWriter
 from robolab.core.world.world_state import get_world
 from robolab.eval.base_client import InferenceClient
@@ -100,7 +102,8 @@ def run_episode(
     obs, _ = env.reset()
     max_steps = env.max_episode_length
     video_fps = 1 / (env_cfg.sim.render_interval * env_cfg.sim.dt) # Hz
-    instruction = env_cfg.instruction
+    instruction = TrackedInstructionFields(env_cfg.instruction)
+    _, display_instruction = primary_instruction(env_cfg.instruction)
     # Pull action dim from the env's action manager (IsaacLab canonical),
     # falling back to the gym action space if the manager isn't available.
     action_dim = getattr(
@@ -111,7 +114,10 @@ def run_episode(
 
     subtask_status = []
 
-    client.begin_episode(episode)
+    # Resolve and deliver policy-requested context exactly once before the
+    # first inference call. Legacy clients request nothing and keep their
+    # existing per-request prompt behavior.
+    client.prepare_episode(episode, instruction)
 
     # Set up per-run HDF5 file and per-env demo indices
     if env.recorder_manager is not None and hasattr(env.recorder_manager, 'set_hdf5_file'):
@@ -122,7 +128,7 @@ def run_episode(
     # Setup per-env streaming video writers
     save_sensor = save_videos and video_mode in ("all", "sensor")
     save_viewport = save_videos and video_mode in ("all", "viewport")
-    cleaned_instruction = re.sub(r'[^\w\s]', '', instruction).replace(' ', '_')
+    cleaned_instruction = re.sub(r'[^\w\s]', '', display_instruction).replace(' ', '_')
     # Define unconditionally so the finally clause below can iterate them either way.
     video_writers_obs: list[VideoWriter] = []
     video_writers_viewport: list[VideoWriter] = []
@@ -178,9 +184,12 @@ def run_episode(
             # loop, so other policies behave exactly as before.
             actions = torch.zeros(env.num_envs, action_dim, device=env.device)
             last_viz = None
+            active_env_ids = list(env.active_env_ids)
             rets = client.infer_batch(
-                obs, instruction, env_ids=list(env.active_env_ids)
+                obs, instruction, env_ids=active_env_ids
             )
+            if set(rets) != set(active_env_ids):
+                raise ValueError("Policy must return one result for every active environment")
             for env_id in sorted(rets):
                 ret = rets[env_id]
                 actions[env_id] = torch.tensor(ret["action"], device=env.device)
@@ -189,7 +198,7 @@ def run_episode(
             timer.stop("policy_inference")
 
             if not headless and last_viz is not None:
-                cv2.imshow(f"{instruction}", cv2.cvtColor(last_viz, cv2.COLOR_RGB2BGR))
+                cv2.imshow(display_instruction, cv2.cvtColor(last_viz, cv2.COLOR_RGB2BGR))
                 cv2.waitKey(1)
 
             if VISUALIZE:
@@ -234,4 +243,8 @@ def run_episode(
             logger.exception("Failed to reset client after episode")
 
     timing = timer.to_dict(actual_steps)
-    return env.get_env_results(), subtask_status, timing
+    env_results = env.get_env_results()
+    for result in env_results:
+        result["instruction_fields"] = instruction.instruction_fields
+        result["instruction_fields_used"] = instruction.instruction_fields_used
+    return env_results, subtask_status, timing

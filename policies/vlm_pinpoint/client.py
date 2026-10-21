@@ -61,6 +61,7 @@ from robolab.core.observations.observation_utils import (
     _label_panel,
     unpack_proprio_obs,
 )
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 # Which observation keys and which view label each --point-camera choice means.
@@ -222,7 +223,7 @@ class PinpointClient(InferenceClient):
     def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
         return {
             "frame": extracted_obs["frame"],
-            "instruction": instruction,
+            "instruction": instruction_text(instruction),
             "tip": extracted_obs["tip"],
             "harness_obs": extracted_obs["harness_obs"],
         }
@@ -569,7 +570,7 @@ class PinpointClient(InferenceClient):
                                           self.view_rot_deg)
         state.depth_viz = depth_viz
         try:
-            point = self.backend.point(frame, instruction, depth_image=depth_viz,
+            point = self.backend.point(frame, instruction_text(instruction), depth_image=depth_viz,
                                        state_text=self._state_text(hobs, marked),
                                        view=self.point_camera)
         except Exception as exc:  # noqa: BLE001 - transport failures count too

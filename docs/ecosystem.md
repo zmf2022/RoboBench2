@@ -10,9 +10,10 @@ forking it. See [Creating New Tasks](task.md) and
 
 ## Task Libraries
 
-| Task Library | Purpose |
-|---|---|
-| [RoboVoLo](https://github.com/NVlabs/RoboVoLo) | Task library from the [VoLo](https://chicychen.github.io/VoLo/) project, extending RoboLab with long-horizon and reasoning-heavy manipulation tasks: multi-step sorting and restacking, spatial reference, recycling, and math/chemistry cube puzzles. Evaluated through the [VoLo policy backend](../policies/volo/README.md) bundled with RoboLab. |
+| Task Library | # Tasks | Objective | Notes |
+|---|---:|---|---|
+| [RoboVoLo](https://github.com/NVlabs/RoboVoLo) | [126](https://github.com/NVlabs/RoboVoLo#robovolo) | Reasoning, Long-Horizon | Task library from the [VoLo](https://chicychen.github.io/VoLo/) project, extending RoboLab with long-horizon and reasoning-heavy manipulation tasks: multi-step sorting and restacking, spatial reference, recycling, and math/chemistry cube puzzles. Evaluated through the [VoLo policy backend](../policies/volo/README.md) bundled with RoboLab. |
+| [LADDER](https://ladder.insait.ai/) | [44](https://ladder.insait.ai/#benchmark) | Long-Horizon | RoboLab-Long suite from [LADDER](https://github.com/insait-institute/ladder), evaluating increasing task horizons in the same scene. The full benchmark contains 145 tasks across three simulation suites, with 1–10 subgoals per instruction. |
 
 ## Adding your project
 

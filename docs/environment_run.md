@@ -32,7 +32,7 @@ env.close()
 | `env_spacing` | `float` | `5.0` | Distance in meters between environment origins (see [Multi-Environment Configuration](#multi-environment-configuration)) |
 | `use_fabric` | `bool` | `True` | Use Fabric for physics (see IsaacLab docs) |
 | `events` | `dict` or configclass | `None` | Event configuration to merge into the environment (e.g., pose randomization, camera variation) |
-| `instruction_type` | `str` | `"default"` | Instruction variant to use when the task defines multiple variants |
+| `instruction_type` | `str` or list of `str` | `None` | Optional instruction fields to expose; all fields are exposed by default |
 | `policy` | `str` | `None` | Policy backend name, stored on `env_cfg` for downstream use |
 | `renderer` | `str` | `"realtime"` | RTX renderer: `"realtime"` (RaytracedLighting) or `"pathtracing"` (PathTracing). Recorded in `env_cfg.json` (see [Renderer Selection](#renderer-selection)) |
 | `rendering_mode` | `str` | `None` | Realtime quality preset (`"performance"`, `"balanced"`, `"quality"`); `None` leaves IsaacLab's default (`balanced`) |
@@ -53,23 +53,36 @@ tag_envs = get_envs(tag="pick_place")                # All environments with a t
 tag_envs = get_envs(tag=["spatial", "simple"])        # Multiple tags
 ```
 
-## Instruction Type Selection
+## Instruction Field Selection
 
-When a task defines multiple instruction variants (see [task.md — Instruction Variants](task.md#instruction-variants)), you can select which variant to use at runtime:
+When a task defines multiple instruction fields, you can expose all of them or
+request a subset:
 
 ```python
 env, env_cfg = create_env(
     "BananaInBowlTask",
     device="cuda:0",
     num_envs=1,
-    instruction_type="vague",
+    instruction_type=["vague", "video"],
 )
 
-print(env_cfg.instruction)             # e.g., "Put stuff in the bowl"
+print(env_cfg.instruction)             # {"vague": "Put stuff...", "video": "demo.mp4"}
 print(env_cfg._instruction_variants)   # The raw instruction field (dict or str)
 ```
 
-When `instruction_type` is not `"default"`, the type name is appended to the run name for distinguishable output files (e.g., `MyTask_vague_0.mp4`) and recorded in the episode results as `"instruction_type"`.
+The policy receives a dictionary-like object. `instruction["vague"]` returns a
+normal string and records `"vague"` in `instruction_fields_used`. Inspecting
+keys does not count as use. `instruction_fields` records what was exposed.
+
+Exposing a field does not automatically transmit it. A context-aware policy
+client can request selected fields and receive them exactly once before the
+first inference call. See
+[Evaluating a New Policy — Episode Context](policy.md#optional-send-episode-context-once)
+for the client hooks and transport lifecycle.
+
+For CLI evaluation, use `--instruction-type vague video`. Omitting the flag
+exposes all fields. Existing single-string tasks and single-value CLI use remain
+supported.
 
 ## Recorder Manager Patch
 
@@ -387,7 +400,7 @@ The built-in `policies/pi0_family/run.py` supports the full set of evaluation fe
 | `--policy BACKEND` | Policy backend (`pi0`, `pi0_fast`, `pi05`, `gr00t`, etc.) | `pi05` |
 | `--num_envs N` | Number of parallel environments (= number of episodes per task) | `1` |
 | `--num-runs N` | Number of sequential runs (default 1). Only increase if GPU memory limits `num_envs`. Total episodes = `num_runs * num_envs`. | `1` |
-| `--instruction-type TYPE` | Instruction variant (`default`, `vague`, `specific`, etc.) | `default` |
+| `--instruction-type FIELD [FIELD ...]` | Optional instruction fields to expose | all fields |
 | `--remote-host HOST` | Policy server host | `localhost` |
 | `--remote-port PORT` | Policy server port | `8000` |
 | `--output-folder-name NAME` | Output folder under `output/`. Reusing a previous folder skips completed episodes. | `<timestamp>_<policy>` |
@@ -436,8 +449,11 @@ python policies/pi0_family/run.py --headless --num_envs 10 --num-runs 2
 # Use a different policy backend (each lives under policies/<policy>/run.py)
 python policies/gr00t/run.py --remote-host 10.0.0.1 --remote-port 5555
 
-# Use a specific instruction variant
+# Expose only one instruction field
 python policies/pi0_family/run.py --task BananaInBowlTask --instruction-type vague
+
+# Expose multiple fields to a multimodal policy
+python policies/pi0_family/run.py --task BananaInBowlTask --instruction-type vague video
 
 # Render with the path tracer (standalone viewport only; see Renderer Selection)
 python policies/pi0_family/run.py --task BananaInBowlTask --renderer pathtracing

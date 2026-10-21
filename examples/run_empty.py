@@ -67,6 +67,7 @@ simulation_app = app_launcher.app
 from robolab.constants import PACKAGE_DIR, set_output_dir # noqa
 from episodes import run_empty_episode # noqa
 from robolab.core.environments.runtime import create_env, end_episode # noqa
+from robolab.core.task.instruction import primary_instruction # noqa
 from robolab.registrations.droid.auto_env_registrations_jointpos import auto_register_droid_envs # noqa
 from robolab.core.environments.factory import get_envs # noqa
 from robolab.constants import get_timestamp # noqa
@@ -107,12 +108,13 @@ def main():
             device=args_cli.device,
             num_envs=args_cli.num_envs,
             use_fabric=True)
+        _, display_instruction = primary_instruction(env_cfg.instruction)
 
         for i in range(num_episodes):
 
             # Policy
             run_name = task_env + f"_{i}"
-            print(f"Running {run_name}: '{env_cfg.instruction}'")
+            print(f"Running {run_name}: '{display_instruction}'")
 
             succ, msgs = run_empty_episode(env,
                 env_cfg=env_cfg,
@@ -152,14 +154,14 @@ def main():
                 run_summary = {"env_name": task_env,
                                 "episode": i,
                                 "success": succ,
-                                "instruction": env_cfg.instruction,
+                                "instruction": display_instruction,
                                 "score": score,
                                 "reason": info}
             else:
                 run_summary = {"env_name": task_env,
                                 "episode": i,
                                 "success": succ,
-                                "instruction": env_cfg.instruction,
+                                "instruction": display_instruction,
                                 }
 
             episode_results = update_experiment_results(run_summary=run_summary, episode_results=episode_results, episode_results_file=episode_results_file)

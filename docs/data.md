@@ -177,7 +177,7 @@ The main results file, located at the top level of the output folder. Uses JSONL
 > **Note:** Legacy folders may contain `episode_results.json` (JSON array format). All analysis tools read both formats transparently.
 
 ```jsonl
-{"env_name": "RubiksCubeAndBananaTask", "task_name": "RubiksCubeAndBananaTask", "run_name": "RubiksCubeAndBananaTask_1", "episode": 1, "policy": "pi05", "instruction": "Put the cube and the banana in the bowl", "instruction_type": "default", "attributes": ["conjunction", "simple"], "success": true, "score": 1.0, "reason": "Completed subtask 'pick_and_place' 1/1", "episode_step": 232, "duration": 15.467, "dt": 0.06666666666666667, "metrics": {"ee_sparc": -3.971, "joint_sparc_mean": -6.190, "ee_isj": 213.389, "joint_isj": 5408.055, "ee_path_length": 1.126, "joint_rmse_mean": 0.022, "ee_speed_max": 0.195, "ee_speed_mean": 0.068}, "events": {"TARGET_OBJECT_DROPPED": 4}}
+{"env_name": "RubiksCubeAndBananaTask", "task_name": "RubiksCubeAndBananaTask", "run_name": "RubiksCubeAndBananaTask_1", "episode": 1, "policy": "pi05", "instruction": "Put the cube and the banana in the bowl", "instruction_type": "default", "instruction_fields": ["default", "vague", "video"], "instruction_fields_used": ["default"], "attributes": ["conjunction", "simple"], "success": true, "score": 1.0, "reason": "Completed subtask 'pick_and_place' 1/1", "episode_step": 232, "duration": 15.467, "dt": 0.06666666666666667, "metrics": {"ee_sparc": -3.971, "joint_sparc_mean": -6.190, "ee_isj": 213.389, "joint_isj": 5408.055, "ee_path_length": 1.126, "joint_rmse_mean": 0.022, "ee_speed_max": 0.195, "ee_speed_mean": 0.068}, "events": {"TARGET_OBJECT_DROPPED": 4}}
 ```
 
 **Fields:**
@@ -189,7 +189,9 @@ The main results file, located at the top level of the output folder. Uses JSONL
 - `env_id`: Which parallel environment within the run (0 to num_envs-1)
 - `policy`: Policy backend used
 - `instruction`: Language instruction for the task
-- `instruction_type`: Instruction variant used (e.g., `default`, `vague`, `specific`)
+- `instruction_type`: Legacy scalar retained when exactly one field identifies the run
+- `instruction_fields`: Field names exposed to the policy
+- `instruction_fields_used`: Field names whose values were retrieved by the policy
 - `attributes`: Task attribute tags (e.g., `simple`, `color`, `spatial`, `conjunction`)
 - `success`: Whether the episode succeeded
 - `score`: Subtask completion score (0.0 to 1.0), present when subtask tracking is enabled

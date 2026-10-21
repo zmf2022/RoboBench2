@@ -5,6 +5,7 @@ numpy
 gymnasium
 
 # remote inference
+openai
 requests
 json_numpy
 pyzmq

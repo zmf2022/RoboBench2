@@ -18,6 +18,7 @@ import msgpack
 import numpy as np
 import websockets.sync.client
 
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 DROID_CONTROL_FREQUENCY = 15
@@ -253,7 +254,7 @@ class G05DroidClient(InferenceClient):
                 # G0.5 uses 1=open while DROID/RoboLab uses 1=closed.
                 "right_gripper": np.asarray(1.0 - gripper_closedness, dtype=np.float32),
             },
-            "task": str(instruction),
+            "task": instruction_text(instruction),
             "frequency": DROID_CONTROL_FREQUENCY,
             "embodiment_type": EMBODIMENT_TYPE,
         }

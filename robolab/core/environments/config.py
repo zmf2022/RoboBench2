@@ -29,6 +29,7 @@ from robolab.core.environments.scene_fixture import (
     table_fixture_asset,
 )
 from robolab.core.sensors.contact_sensor_utils import create_contact_sensors
+from robolab.core.task.instruction import primary_instruction
 from robolab.core.task.task import Task
 from robolab.core.task.task_utils import load_task_from_file
 
@@ -478,7 +479,10 @@ def parse_env_cfg(
 
 def print_env_cfg(env_cfg: RobolabDefaultEnvCfg, prefix=""):
     """Print environment configuration details."""
-    print(f"{prefix}instruction: {env_cfg.instruction}")
+    _, display_instruction = primary_instruction(env_cfg.instruction)
+    print(f"{prefix}instruction: {display_instruction}")
+    if not isinstance(env_cfg.instruction, str):
+        print(f"{prefix}instruction fields: {', '.join(env_cfg.instruction)}")
     print(f"{prefix}scene: {env_cfg.scene.__class__.__name__}")
     print(f"{prefix}observations: {env_cfg.observations.__class__.__name__}")
     print(f"{prefix}actions: {env_cfg.actions.__class__.__name__}")

@@ -9400,7 +9400,7 @@
       0.07784200459718704,
       0.0511309988796711
     ],
-    "mass": 2.5,
+    "mass": 0.1,
     "density": 0.0,
     "dynamic_friction": 2.0,
     "static_friction": 2.0,
@@ -9560,7 +9560,7 @@
       0.18743400275707245,
       0.05731699988245964
     ],
-    "mass": 1.5,
+    "mass": 0.895,
     "density": 0.0,
     "dynamic_friction": 2.0,
     "static_friction": 2.0,

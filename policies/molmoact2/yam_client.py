@@ -29,6 +29,7 @@ import urllib.request
 import numpy as np
 from numpy.lib.format import descr_to_dtype, dtype_to_descr
 
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 NORM_TAG = "yam_dual_molmoact2"
@@ -132,7 +133,7 @@ class MolmoAct2YamClient(InferenceClient):
         return {"images": images, "state": state}
 
     def _pack_request(self, extracted_obs: dict, instruction: str) -> bytes:
-        payload = {**extracted_obs["images"], "instruction": instruction, "state": extracted_obs["state"],
+        payload = {**extracted_obs["images"], "instruction": instruction_text(instruction), "state": extracted_obs["state"],
                    "normalization_tag": NORM_TAG, "num_steps": self.num_steps}
         return np_dumps(payload)
 

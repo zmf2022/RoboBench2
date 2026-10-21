@@ -7,6 +7,8 @@ from typing import Any
 from isaaclab.managers import TerminationTermCfg as TerminationCfg
 from isaaclab.scene import InteractiveSceneCfg
 
+from robolab.core.task.instruction import normalize_instruction_fields
+
 
 @dataclass
 class Task:
@@ -58,6 +60,11 @@ def verify_task_valid(task_class: type[Task]) -> tuple[bool, str]:
         error = f"Task class {task_class.__name__} is None."
         return False, error
 
+    try:
+        normalize_instruction_fields(task_class.instruction)
+    except ValueError as exc:
+        return False, f"Task class {task_class.__name__} has invalid instruction fields: {exc}"
+
     if task_class.terminations is None:
         error = f"Task class {task_class.__name__} has no terminations."
         return False, error
@@ -91,6 +98,9 @@ def verify_task_valid(task_class: type[Task]) -> tuple[bool, str]:
         for obj_args in ["object", "container", "objects", "reference_object", "surface"]:
             if obj_args in params:
                 objects = params.get(obj_args, [])
+                if objects is None:
+                    # Count conditionals accept object=None (= all contact objects).
+                    continue
                 if isinstance(objects, str):
                     objects = [objects]
                 elif isinstance(objects, list):

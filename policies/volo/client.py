@@ -11,6 +11,7 @@ stripping the extra keys.
 from policies.cosmos3.client import Cosmos3Client
 from policies.pi0_family.client import Pi0DroidJointposClient
 from policies.volo.metadata import OrchestratorMetadataMixin
+from robolab.core.task.instruction import InstructionInput
 
 
 class VoloCosmos3Client(OrchestratorMetadataMixin, Cosmos3Client):
@@ -34,7 +35,7 @@ class VoloPi0Client(OrchestratorMetadataMixin, Pi0DroidJointposClient):
                 extracted[key] = value[env_id].clone().detach().cpu().numpy()
         return extracted
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         request = super()._pack_request(extracted_obs, instruction)
         request["observation/exterior_image_1_left_raw"] = extracted_obs["right_image"]
         request["observation/wrist_image_left_raw"] = extracted_obs["wrist_image"]

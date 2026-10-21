@@ -6,6 +6,7 @@ import logging
 import numpy as np
 from openpi_client import image_tools, websocket_client_policy
 
+from robolab.core.task.instruction import InstructionInput, instruction_text
 from robolab.eval.base_client import InferenceClient
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class Pi0DroidJointposClient(InferenceClient):
             "gripper_position": gripper_position,
         }
 
-    def _pack_request(self, extracted_obs: dict, instruction: str) -> dict:
+    def _pack_request(self, extracted_obs: dict, instruction: InstructionInput) -> dict:
         return {
             "observation/exterior_image_1_left": image_tools.resize_with_pad(
                 extracted_obs["right_image"], 224, 224
@@ -102,7 +103,7 @@ class Pi0DroidJointposClient(InferenceClient):
             ),
             "observation/joint_position": extracted_obs["joint_position"],
             "observation/gripper_position": extracted_obs["gripper_position"],
-            "prompt": instruction,
+            "prompt": instruction_text(instruction),
         }
 
     def _query_server(self, request: dict) -> dict:

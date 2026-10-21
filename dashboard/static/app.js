@@ -2234,10 +2234,9 @@ async function renderEpisode(runId, task, envId, runIndex) {
           `score ${fmtScore(ep.score)}${ep.score_peak != null && ep.score_peak !== ep.score ? ` (peak ${fmtScore(ep.score_peak)})` : ''}`)
       : null,
     ep.instruction_type ? chip(`instr: ${ep.instruction_type}`) : null,
+    ep.instruction_fields?.length ? chip(`fields: ${ep.instruction_fields.join(', ')}`) : null,
+    ep.instruction_fields_used?.length ? chip(`used: ${ep.instruction_fields_used.join(', ')}`) : null,
     ...(ep.attributes || []).map((a) => chip(a)),
-    // When this episode was recorded (newest video mtime) — last in the row,
-    // subtle, full timestamp on hover (The reviewer: "to the very right after the
-    // last flag").
     ep.recorded_at
       ? el('span', { class: 'run-date font-mono self-center', title: new Date(ep.recorded_at * 1000).toLocaleString() },
           `${fmtRelativeDay(ep.recorded_at)} ${fmtClock(ep.recorded_at)}`)
@@ -2999,6 +2998,8 @@ function renderTabMeta(host, ep) {
     ['success', ep.success ? 'true' : 'false'],
     ['instruction', ep.instruction || '—'],
     ['instruction_type', ep.instruction_type || '—'],
+    ['instruction_fields', (ep.instruction_fields || []).join(', ') || '—'],
+    ['instruction_fields_used', (ep.instruction_fields_used || []).join(', ') || '—'],
     ['attributes', (ep.attributes || []).join(', ') || '—'],
     ['has_hdf5', ep.has_hdf5 ? 'true' : 'false'],
     ['videos', (ep.videos || []).map((v) => v.name).join(', ') || 'none'],

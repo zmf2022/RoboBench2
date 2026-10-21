@@ -2,7 +2,7 @@
 
 [![offline tests](https://github.com/Manda-Robotics/RoboLab-Verified/actions/workflows/offline-tests.yml/badge.svg)](https://github.com/Manda-Robotics/RoboLab-Verified/actions/workflows/offline-tests.yml)
 
-RoboLab Verified is a fork of [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.1, a task-based simulation benchmark for robot manipulation policies built on [Isaac Lab](https://github.com/isaac-sim/IsaacLab). The fork keeps upstream's 120 tasks, scenes, success predicates and physics defaults. It changes how episodes are scored, how subtasks are credited, what the event log records, and what the sensors and recordings capture.
+RoboLab Verified is a fork of [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.2, a task-based simulation benchmark for robot manipulation policies built on [Isaac Lab](https://github.com/isaac-sim/IsaacLab). The fork keeps upstream's 120 tasks, scenes, success predicates and physics defaults. It changes how episodes are scored, how subtasks are credited, what the event log records, and what the sensors and recordings capture.
 
 <h4 align="center"><a href="docs/verified/README.md">Why this fork</a> · <a href="docs/verified/changes.md">Changes</a> · <a href="docs/verified/findings.md">Findings</a> · <a href="docs/verified/migration.md">Migration</a> · <a href="docs/verified/verification.md">Verification</a></h4>
 
@@ -26,7 +26,16 @@ The changes by area follow; [`docs/verified/changes.md`](docs/verified/changes.m
 - **Embodiments and backends**: a bimanual YAM rig (two I2RT arms, the side-by-side station most bimanual data is collected on) with a client for Ai2's released MolmoAct 2 bimanual checkpoint ([`docs/bimanual_yam.md`](docs/bimanual_yam.md)), a dual-Franka rig, a bimanual ViperX (ALOHA) config (its asset is not shipped), and a connector for running a pointing-capable VLM as a policy.
 - **Tooling**: offline audits of task definitions and scenes that run without a simulator, and a verifier that evaluates each flag change as PASS / FAIL / N/A over recorded runs.
 
-Status: the offline suite (251 tests) runs in CI. Each change is marked RUNTIME, OFFLINE or NONE according to how it was verified. About 25 of the 120 tasks have been run against the patched code, most with π0.5 only. [`docs/verified/verification.md`](docs/verified/verification.md) lists the verification status of each change. Numbers reported from this fork should include the tag.
+Status: the offline suite (377 tests) passes locally after the v0.3.2 integration. Each change is marked RUNTIME, OFFLINE or NONE according to how it was verified. About 25 of the 120 tasks have been run against the patched code, most with π0.5 only. [`docs/verified/verification.md`](docs/verified/verification.md) lists the verification status of each change. Numbers reported from this fork should include the tag.
+
+## Upstream News
+
+- **[2026/10/18]** 🔥 Added [**Astranomy**](https://research.nvidia.com/labs/srl/projects/astranomy/) policy code, using general-purpose models (such as GPT-6 Astra) as a native robot policy.
+- **[2026/10/13]** 🔥 [**LADDER**](https://ladder.insait.ai/) introduces RoboLab-Long, a suite of 44 tasks for evaluating long-horizon manipulation, as part of a 145-task benchmark spanning three simulation suites. See [Task Libraries](docs/ecosystem.md#task-libraries).
+- **[2026/08/19]** 🤖 [**DROID+**](https://github.com/NVlabs/DroidPlus) is released: A simple DROID hardware stack. Your RoboLab policy setup will also work with DROID+.
+- **[2026/08/07]** 🔥 [**RoboVoLo**](https://github.com/NVlabs/RoboVoLo) is released — a task library from the [VoLo](https://chicychen.github.io/VoLo/) project extending RoboLab with long-horizon and reasoning-heavy manipulation tasks, evaluated via the bundled [VoLo policy backend](policies/volo/README.md).
+
+For all updates, including minor improvements and bug fixes, see the [Changelog](CHANGELOG.md).
 
 ## Key Features
 
@@ -235,7 +244,7 @@ RoboLab is the work of NVIDIA's Seattle Robotics Lab. If you use the benchmark, 
 
 ```bibtex
 @inproceedings{yang2026robolab,
-    author    = {Xuning Yang and Rishit Dagli and Alex Zook and Hugo Hadfield and Ankit Goyal and Stan Birchfield and Fabio Ramos and Jonathan Tremblay},
+    author    = {Jenai Xuning Yang and Rishit Dagli and Alex Zook and Hugo Hadfield and Ankit Goyal and Stan Birchfield and Fabio Ramos and Jonathan Tremblay},
     title     = {{RoboLab: A High-Fidelity Simulation Benchmark for Analysis of Task Generalist Policies}},
     booktitle = {Proceedings of Robotics: Science and Systems},
     year      = {2026},

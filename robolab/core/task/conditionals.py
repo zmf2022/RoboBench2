@@ -1063,6 +1063,141 @@ def object_groups_in_containers(
 
 
 #########################################################
+# Counting conditions
+#########################################################
+
+def _resolve_count_candidates(env, object, ignore_objects: list[str]) -> list[str]:
+    """Resolve the candidate object set for counting.
+
+    ``object=None`` selects every entry of ``env.cfg.contact_object_list``
+    except ``ignore_objects`` (callers append the reference container or
+    surface so it never counts itself). An explicit name or list is used
+    as-is.
+    """
+    if object is None:
+        ignore = set(ignore_objects)
+        return [obj for obj in env.cfg.contact_object_list if obj not in ignore]
+    return [object] if isinstance(object, str) else list(object)
+
+
+def get_object_count_in_container(
+    env,
+    container: str,
+    object: str | list[str] | None = None,
+    tolerance: float = 0.01,
+    require_gripper_detached: bool = False,
+    gripper_name: str | list[str] = "gripper",
+    ignore_objects: list[str] = ["table"],
+    env_id: int | None = None,
+):
+    """Count candidate objects currently inside ``container``.
+
+    Uses the same containment check as ``object_in_container``
+    (centroid in the container's open-top convex hull), so counts always
+    agree with the boolean conditional. Not a conditional itself — use
+    ``object_count_in_container`` for terminations and subtasks.
+
+    Returns:
+        int when env_id is an int, Tensor(num_envs,) long when env_id is None.
+    """
+    candidates = _resolve_count_candidates(env, object, list(ignore_objects) + [container])
+
+    def condition(world, obj, env_id=None):
+        result = in_opentop_container(world, obj, container, tolerance=tolerance, env_id=env_id)
+        if require_gripper_detached:
+            result = _and(result, gripper_detached(world, obj, gripper_name, env_id=env_id))
+        return result
+
+    return count_matching_objects(env, candidates, condition, env_id=env_id)
+
+
+def get_object_count_on_surface(
+    env,
+    surface: str,
+    object: str | list[str] | None = None,
+    tolerance: float = 0.01,
+    require_gripper_detached: bool = False,
+    gripper_name: str | list[str] = "gripper",
+    ignore_objects: list[str] = ["table"],
+    env_id: int | None = None,
+):
+    """Count candidate objects stably supported on ``surface`` (plate, tray, table).
+
+    Uses the same support check as ``object_on_top`` (contact-force cone +
+    centroid in the surface's footprint). Returns int (env_id=int) or
+    Tensor(num_envs,) long (env_id=None).
+    """
+    candidates = _resolve_count_candidates(env, object, list(ignore_objects) + [surface])
+
+    def condition(world, obj, env_id=None):
+        result = world.is_supported_on_surface(obj, surface, env_id=env_id)
+        result = _and(result, centroid_in_footprint(world, obj, surface, tolerance=tolerance, env_id=env_id))
+        if require_gripper_detached:
+            result = _and(result, gripper_detached(world, obj, gripper_name, env_id=env_id))
+        return result
+
+    return count_matching_objects(env, candidates, condition, env_id=env_id)
+
+
+@atomic
+def object_count_in_container(
+    env,
+    container: str,
+    count: int,
+    object: str | list[str] | None = None,
+    comparison: str = "==",
+    tolerance: float = 0.01,
+    require_gripper_detached: bool = False,
+    gripper_name: str | list[str] = "gripper",
+    ignore_objects: list[str] = ["table"],
+    env_id: int | None = None,
+):
+    """Checks whether the number of objects in ``container`` satisfies ``comparison count``.
+
+    ``object=None`` counts every contact object except ``ignore_objects`` and
+    the container itself; pass an explicit list to restrict candidates.
+    Comparison is one of '==', '>=', '<=', '>', '<'.
+    """
+    n = get_object_count_in_container(
+        env, container, object, tolerance, require_gripper_detached,
+        gripper_name, ignore_objects, env_id=env_id,
+    )
+    result = compare_count(n, count, comparison)
+    if robolab.constants.DEBUG:
+        print(f"object_count_in_container: '{container}' contains {n} objects, want {comparison}{count} -> {result}")
+    return result
+
+
+@atomic
+def object_count_on_surface(
+    env,
+    surface: str,
+    count: int,
+    object: str | list[str] | None = None,
+    comparison: str = "==",
+    tolerance: float = 0.01,
+    require_gripper_detached: bool = False,
+    gripper_name: str | list[str] = "gripper",
+    ignore_objects: list[str] = ["table"],
+    env_id: int | None = None,
+):
+    """Checks whether the number of objects supported on ``surface`` satisfies ``comparison count``.
+
+    Works for plates, trays, and any flat reference object — the same support
+    semantics as ``object_on_top``. Comparison is one of '==', '>=', '<=',
+    '>', '<'.
+    """
+    n = get_object_count_on_surface(
+        env, surface, object, tolerance, require_gripper_detached,
+        gripper_name, ignore_objects, env_id=env_id,
+    )
+    result = compare_count(n, count, comparison)
+    if robolab.constants.DEBUG:
+        print(f"object_count_on_surface: '{surface}' supports {n} objects, want {comparison}{count} -> {result}")
+    return result
+
+
+#########################################################
 # Not conditions
 #########################################################
 @atomic
@@ -1156,6 +1291,32 @@ def gripper_hit_table(
     return result
 
 
+def _resolve_gripper_closure_entry(value, default_asset: str) -> tuple[str, str, float, float, bool]:
+    """Normalize one ``gripper_closure_cfg`` entry.
+
+    Returns ``(articulation name, joint name, open position, closed position,
+    is_explicit)``. The legacy tuple form ``(joint, open, closed)`` reads the
+    default articulation and keeps the lenient unknown-joint fallback; the
+    explicit dict form ``{"asset": ..., "joint": ..., "open": ..., "closed": ...}``
+    selects any articulation (multi-articulation embodiments) and raises on an
+    unresolvable asset or joint. ``"asset"`` is optional and defaults to the
+    primary robot.
+    """
+    if isinstance(value, dict):
+        unknown_keys = set(value) - {"asset", "joint", "open", "closed"}
+        if unknown_keys:
+            raise ValueError(
+                f"Unknown gripper_closure_cfg keys {sorted(unknown_keys)}; "
+                "expected 'asset', 'joint', 'open', 'closed'"
+            )
+        missing_keys = {"joint", "open", "closed"} - set(value)
+        if missing_keys:
+            raise ValueError(f"gripper_closure_cfg dict entry is missing {sorted(missing_keys)}: {value!r}")
+        return value.get("asset", default_asset), value["joint"], value["open"], value["closed"], True
+    joint_name, open_position, closed_position = value
+    return default_asset, joint_name, open_position, closed_position, False
+
+
 def gripper_fully_closed(
     env,
     robot_name: str = "robot",
@@ -1167,15 +1328,15 @@ def gripper_fully_closed(
     """Check whether any selected concrete gripper is sufficiently closed.
 
     Robots may publish ``env.cfg.gripper_closure_cfg`` as a mapping from concrete
-    contact labels to ``(joint_name, open_position, closed_position)``. The
-    legacy Droid contract remains the fallback when no declaration is present.
+    contact labels to ``(joint_name, open_position, closed_position)`` or to the
+    explicit dict form accepted by ``_resolve_gripper_closure_entry`` (required
+    when a gripper's joints live on a non-primary articulation). The legacy
+    Droid contract remains the fallback when no declaration is present.
     """
     import math as _math
 
     world = get_world(env)
-    joint_positions = world.get_joint_positions(robot_name, env_id=env_id)
-    joint_names = world.get_joint_names(robot_name)
-    state_cfg: dict[str, tuple[str, float, float]] = getattr(env.cfg, "gripper_closure_cfg", None) or {}
+    state_cfg: dict[str, tuple | dict] = getattr(env.cfg, "gripper_closure_cfg", None) or {}
     labels = world.resolve_contact_bodies(gripper_name)
 
     # Preserve explicit and pre-declaration callers that use Droid's original
@@ -1187,10 +1348,21 @@ def gripper_fully_closed(
         labels = [labels[0] if labels else "gripper"]
         state_cfg = {labels[0]: ("finger_joint", 0.0, _math.pi / 4)}
 
+    # One joint-state fetch per articulation, shared across labels.
+    joint_cache: dict[str, tuple[list[str], torch.Tensor]] = {}
+
+    def _joints_for(asset_name: str) -> tuple[list[str], torch.Tensor]:
+        if asset_name not in joint_cache:
+            joint_cache[asset_name] = (
+                world.get_joint_names(asset_name),
+                world.get_joint_positions(asset_name, env_id=env_id),
+            )
+        return joint_cache[asset_name]
+
     closed_states: list[bool | torch.Tensor] = []
     for label in labels:
         cfg = state_cfg.get(label)
-        if cfg is None or cfg[0] not in joint_names:
+        if cfg is None:
             closed_states.append(
                 False
                 if env_id is not None
@@ -1198,7 +1370,25 @@ def gripper_fully_closed(
             )
             continue
 
-        joint_name, open_position, closed_position = cfg
+        asset_name, joint_name, open_position, closed_position, is_explicit = _resolve_gripper_closure_entry(
+            cfg, robot_name
+        )
+        joint_names, joint_positions = _joints_for(asset_name)
+        if joint_name not in joint_names:
+            if is_explicit:
+                # An explicit declaration that fails to resolve is a robot cfg
+                # bug; falling back to "not closed" would hide it.
+                raise ValueError(
+                    f"Gripper '{label}': joint '{joint_name}' not found on articulation "
+                    f"'{asset_name}' (joints: {joint_names}). Check gripper_closure_cfg."
+                )
+            closed_states.append(
+                False
+                if env_id is not None
+                else torch.zeros(world.env.num_envs, dtype=torch.bool, device=world.env.device)
+            )
+            continue
+
         span = closed_position - open_position
         if abs(span) < 1.0e-9:
             raise ValueError(f"Gripper '{label}' has identical open and closed positions")

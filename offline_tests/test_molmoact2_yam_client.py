@@ -108,3 +108,12 @@ def test_infer_round_trip_against_fake_server(fake_server):
     client.infer(_raw_obs(), "x", env_id=1)
     assert len(_FakeAct.seen) == 2
     assert out["viz"].shape == (360, 3 * 640, 3)
+
+
+def test_tracked_instruction_is_serialized_as_text_and_records_usage():
+    from robolab.core.task.instruction import TrackedInstructionFields
+    instruction = TrackedInstructionFields({"default": "Put fruit in the box", "video": "demo.mp4"})
+    client = yc.MolmoAct2YamClient(server="http://127.0.0.1:8202")
+    payload = yc.np_loads(client._pack_request({"images": {}, "state": np.zeros(14)}, instruction))
+    assert payload["instruction"] == "Put fruit in the box"
+    assert instruction.instruction_fields_used == ["default"]

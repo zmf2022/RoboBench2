@@ -33,6 +33,7 @@ from typing import Any
 
 import numpy as np
 
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 from robolab.core.observations.observation_utils import (
@@ -352,7 +353,7 @@ class VLMInferenceClient(InferenceClient):
         gripper_cmd = state.gripper_cmd if state is not None else GRIPPER_OPEN
         recent = state.recent if state is not None else []
         payload = dict(extracted_obs)
-        payload["instruction"] = instruction
+        payload["instruction"] = instruction_text(instruction)
         messages = self.controller.build_prompt(payload, gripper_cmd=gripper_cmd, recent=recent)
 
         request: dict = {"messages": messages}

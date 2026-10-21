@@ -17,6 +17,7 @@ import cv2
 import numpy as np
 import zmq
 
+from robolab.core.task.instruction import instruction_text
 from robolab.eval.base_client import InferenceClient
 
 from .protocol import PROTOCOL_VERSION, ROBOT_TYPE, MsgSerializer
@@ -201,7 +202,7 @@ class XR1RoboCasaClient(InferenceClient):
                 for name in ("base_left", "base_right", "wrist")
             },
             "state": state,
-            "instruction": str(instruction),
+            "instruction": instruction_text(instruction),
             "seed": self.request_seed,
         }
 

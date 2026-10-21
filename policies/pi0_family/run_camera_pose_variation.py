@@ -74,6 +74,7 @@ simulation_app = app_launcher.app
 
 from robolab.constants import PACKAGE_DIR, set_output_dir # noqa
 from robolab.core.environments.runtime import create_env # noqa
+from robolab.core.task.instruction import primary_instruction # noqa
 from robolab.eval import run_episode, summarize_run # noqa
 from policies.pi0_family.client import Pi0DroidJointposClient # noqa
 from robolab.registrations.droid.auto_env_registrations_jointpos import auto_register_droid_envs # noqa
@@ -174,6 +175,7 @@ def main():
             use_fabric=True,
             events=camera_pose_event,
             policy=args_cli.policy)
+        _, display_instruction = primary_instruction(env_cfg.instruction)
 
         client = Pi0DroidJointposClient(
             policy_variant=args_cli.policy,
@@ -189,7 +191,7 @@ def main():
                 continue
 
             run_name = task_env + f"_{run_idx}"
-            print(f"\033[96m[RoboLab] Running {run_name}: '{env_cfg.instruction}' (run {run_idx}, {num_envs} envs)\033[0m")
+            print(f"\033[96m[RoboLab] Running {run_name}: '{display_instruction}' (run {run_idx}, {num_envs} envs)\033[0m")
 
             env_results, msgs, timing = run_episode(env=env,
                         env_cfg=env_cfg,

@@ -26,6 +26,7 @@ from policies.jev.prompts import (
 )
 from policies.jev.state import build_state
 from policies.jev.types import AXIS_CHOICES, EefDecision, PolicyError
+from robolab.core.task.instruction import TrackedInstructionFields
 
 
 def _state(**overrides):
@@ -754,3 +755,14 @@ def test_env_reset_does_not_reuse_consumed_decision_ids(stubbed_client):
 def test_multiple_tasks_are_rejected_instead_of_using_the_first(stubbed_client):
     with pytest.raises(ValueError, match="one task"):
         stubbed_client.JevClient(backend=None, task=["BananaInBowlTask", "NoSuchTask"])
+
+
+def test_jev_reads_selected_instruction_text_and_records_usage(stubbed_client):
+    client = stubbed_client.JevClient(backend=None, task="BananaInBowlTask")
+    pose = {"tcp": np.array([0.35, 0.19, 0.12]), "ee_quat": _yaw_quat(0),
+            "gripper_width": 0.085}
+    instruction = TrackedInstructionFields({"vague": "Move the fruit", "video": "demo.mp4"})
+    state = client._measured_state(_client_observation(), instruction,
+                                   client._env_state(0), pose, 0)
+    assert state["task"] == "Move the fruit"
+    assert instruction.instruction_fields_used == ["vague"]

@@ -28,6 +28,7 @@ four narrow hooks:
 
 import numpy as np
 from robolab.eval import InferenceClient
+from robolab.core.task.instruction import instruction_text
 
 
 class MyPolicyClient(InferenceClient):
@@ -53,7 +54,10 @@ class MyPolicyClient(InferenceClient):
 
     def _pack_request(self, extracted_obs, instruction):
         # Whatever wire format your server expects
-        return {"image": extracted_obs["image"], "prompt": instruction}
+        return {
+            "image": extracted_obs["image"],
+            "prompt": instruction_text(instruction),
+        }
 
     def _query_server(self, request):
         return self.client.infer(request)
@@ -85,6 +89,68 @@ client = MyPolicyClient(remote_host="localhost", remote_port=8000)
 ```
 
 See the [existing clients](#existing-clients-as-reference) for complete working examples.
+
+## Optional: Send Episode Context Once
+
+An instruction may be a flat mapping of named string fields rather than one
+prompt. Values can be language, a local file path, a URL, or another string the
+policy knows how to interpret. RoboLab passes a dictionary-like tracked mapping
+to the policy client; reading a value records its name in
+`instruction_fields_used`.
+
+A context-aware client can request the fields its local policy or remote server
+needs and receive them once before the first inference call:
+
+```python
+class MyContextPolicyClient(InferenceClient):
+    def requested_context_fields(self, available_fields, *, episode_idx):
+        # This may be a static client decision or come from a server handshake.
+        # Only field names are visible here; values have not been retrieved yet.
+        response = self.transport.request({
+            "type": "request_context",
+            "episode_idx": episode_idx,
+            "available_fields": list(available_fields),
+        })
+        return response["fields"]
+
+    def add_context(self, context, *, episode_idx):
+        # Transport-specific pseudocode: send exactly one setup message.
+        self.transport.send({
+            "type": "add_context",
+            "episode_idx": episode_idx,
+            "context": dict(context),
+        })
+
+    def _pack_request(self, extracted_obs, instruction):
+        # Context already lives on the policy side, so per-step requests omit it.
+        return {"image": extracted_obs["image"]}
+```
+
+The lifecycle is:
+
+1. `run_episode` calls `client.prepare_episode(...)` before policy inference.
+2. `prepare_episode` calls the existing `begin_episode(episode_idx)` hook.
+3. `requested_context_fields(available_fields)` returns the desired field names.
+4. RoboLab retrieves only those values, which records them as used, and calls
+   `add_context(context, episode_idx=...)` once.
+5. All subsequent `infer` and `infer_batch` calls reuse policy-side context.
+
+The once-only rule is per episode. `prepare_episode` is idempotent until the
+client's full `reset()` at the end of the episode, and reconnects never trigger
+another `add_context` call. If a server loses its retained context, the client
+must fail or restart the episode instead of silently resending it.
+
+RoboLab defines the client lifecycle, not a universal wire format. HTTP,
+WebSocket, WSS, and in-process clients decide how the request list and
+`add_context` message are encoded. For a local video path, the client may load
+and upload the video in `add_context`; for a URL or shared path, it may send the
+string directly. Either way, the payload is sent once and never attached to
+per-step inference requests.
+
+Clients that do not override `requested_context_fields` request nothing and
+remain backward compatible. Existing text-policy clients use this legacy mode:
+they call `instruction_text(...)` and keep the prompt in their normal inference
+request because their current servers do not implement episode-context setup.
 
 ## Step 2: Write Your Evaluation Script and Run It
 

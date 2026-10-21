@@ -1,6 +1,6 @@
 # Available Tasks
 
-This table contains metadata for tasks in `/home/xuningy/projects/robolab/robolab/tasks`.
+This table contains metadata for tasks in `robolab/tasks/`.
 
 **Filtered by subfolders:** benchmark
 

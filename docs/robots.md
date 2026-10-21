@@ -48,7 +48,7 @@ class MyRobotCfg:
 # Standard pedestal (also the default for robots without the label):
 MyRobotCfg.table_fixture = FRANKA_TABLE_FIXTURE
 
-# Robots with their own base — no fixture:
+# Robots that ship their own base or support structure — no fixture:
 MyRobotCfg.table_fixture = None
 ```
 
@@ -76,22 +76,64 @@ MyRobotCfg.table_fixture = TableFixtureCfg(
 )
 ```
 
+### Single vs. Multi-Articulation Robots
+
+A robot embodiment is one or more **articulations** (scene assets). The primary
+articulation must be named `robot`; additional ones take their own names (e.g.
+`left_robot`). Which shape to pick:
+
+- **Single articulation** — the hardware is one connected kinematic tree, even
+  with two arms (e.g. a humanoid with torso, head, both arms, and both grippers
+  in one tree). Prefer this whenever the source asset allows it.
+- **Multiple articulations** — the units are mechanically independent robots
+  evaluated as one embodiment (e.g. two independently mounted arms).
+
+Most of the framework is articulation-count agnostic:
+
+- **Actions** — each action term binds its own `asset_name`; one flat policy
+  action vector can drive any number of articulations.
+- **Observations** — obs terms are functions and may read any scene asset.
+- **States and replay** — the `states` recorder and initial-state recorder use
+  `scene.get_state()`, which covers every articulation keyed by asset name, so
+  recording and replay need no per-robot wiring. Note that consumers of a
+  multi-articulation robot's dataset must read all of its keys, not just
+  `robot`.
+- **Contacts** — `contact_gripper` labels carry full prim paths, so each label
+  can point into a different articulation.
+
+The `ee_recorder_bodies` and `gripper_closure_cfg` labels select their
+articulation per entry via the explicit dict form (see the sections below), so
+EE recording and gripper diagnostics cover multi-articulation embodiments too.
+What still assumes the single primary `robot` articulation: the robot-root
+pose recorder, which records `robot`'s root only.
+
 ### End-Effector Pose Recording
 
 Every robot cfg **must** declare the `ee_recorder_bodies` label: a dict mapping
 an HDF5 channel name to the articulation body recorded for that channel (pose
-in the robot-root frame, see [frames.md](frames.md)). There is no default —
-env generation fails with a `ValueError` naming the robot cfg if the label is
-missing. Use `{}` to explicitly disable EE-pose recording.
+in that articulation's root frame, see [frames.md](frames.md)). There is no
+default — env generation fails with a `ValueError` naming the robot cfg if the
+label is missing. Use `{}` to explicitly disable EE-pose recording.
+
+A bare string value names a body on the primary `robot` articulation. For
+embodiments made of several articulations, use the explicit dict form
+`{"asset": <articulation>, "body": <body>}` per channel (`"asset"` is optional
+and defaults to `"robot"`). An unresolvable asset or body raises an error.
 
 ```python
-# Single-arm (DROID: Robotiq gripper base):
-DroidCfg.ee_recorder_bodies = {"ee_pose": "base_link"}
+# Single-arm:
+MyRobotCfg.ee_recorder_bodies = {"ee_pose": "gripper_base_link"}
 
-# Bimanual: one channel per arm
+# Bimanual, single articulation: one channel per arm, both bodies in `robot`
 MyBimanualCfg.ee_recorder_bodies = {
-    "left_ee_pose": "left_arm_link7",
-    "right_ee_pose": "right_arm_link7",
+    "left_ee_pose": "left_arm_ee_link",
+    "right_ee_pose": "right_arm_ee_link",
+}
+
+# Multi-articulation: independent arms as separate scene assets
+MyDualArmCfg.ee_recorder_bodies = {
+    "left_ee_pose": {"asset": "left_robot", "body": "ee_link"},
+    "right_ee_pose": {"asset": "robot", "body": "ee_link"},
 }
 ```
 
@@ -107,6 +149,16 @@ FAIL for the run. Use the link names from the robot USD:
 # DROID: the two prims bound to the Robotiq PhysicsMaterial
 DroidCfg.friction_bodies = ["left_inner_finger", "right_inner_finger"]
 ```
+
+Each built-in robot's declared channels are listed in its section of
+[`robolab/robots/README.md`](../robolab/robots/README.md).
+
+The `gripper_closure_cfg` label (gripper failure diagnostics) accepts the same
+two forms per contact label: the legacy tuple `(joint, open, closed)` reads the
+primary `robot` articulation, and the explicit dict form
+`{"asset": ..., "joint": ..., "open": ..., "closed": ...}` selects any
+articulation. Explicit entries raise on an unresolvable asset or joint; legacy
+tuples keep the lenient "unknown joint means not closed" fallback.
 
 ### Label Assignment Rules
 
@@ -131,6 +183,10 @@ auto_discover_and_create_cfgs(
     # ... other registration kwargs
 )
 ```
+
+Per-robot details — action layouts, registration entry points, smoke-test
+commands, cameras — live in each robot's section of
+[`robolab/robots/README.md`](../robolab/robots/README.md).
 
 ## Defining a Custom Robot
 

@@ -20,6 +20,7 @@ For writing your own inference client, see [Evaluating a New Policy](../docs/pol
 | [`molmoact2/`](molmoact2/README.md) | MolmoAct 2 bimanual YAM checkpoint (Ai2) on the bimanual YAM rig, through Ai2's own inference server | [Code](https://github.com/allenai/molmoact2), [Model](https://huggingface.co/allenai/MolmoAct2-BimanualYAM), [Blog](https://allenai.org/blog/molmoact2) |
 | [`yam_template/`](yam_template/client.py) | Copy-me client and runner for a third-party bimanual YAM policy; the stand-in model wobbles the arms. See [`docs/bimanual_yam.md`](../docs/bimanual_yam.md) | [Guide](../docs/bimanual_yam.md) |
 | [`bimanual/`](bimanual/run.py) | Scripted client for the dual-Franka, YAM and ALOHA rigs — proves the two-arm stack turns end to end; not a policy | [Robots](../robolab/robots/README.md) |
+| [`ai_native/`](ai_native/README.md) | Direct-API action chunks/B-splines and persistent Codex App Server `agent_eef` | [Design](ai_native/DESIGN.md), [Codex App Server](https://developers.openai.com/codex/app-server), [Astra](https://developers.openai.com/api/docs/models/gpt-6-astra) |
 
 **π0.5 on the DROID joint-position action space** needs the `pi05_droid_jointpos`
 checkpoint: `scripts/serve_pi05.sh`. OpenPI's `--env DROID` convenience flag serves delta

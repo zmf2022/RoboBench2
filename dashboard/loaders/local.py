@@ -133,6 +133,8 @@ class EpisodeRow:
     episode_step: int
     instruction: str
     instruction_type: str | None
+    instruction_fields: list[str] = field(default_factory=list)
+    instruction_fields_used: list[str] = field(default_factory=list)
     attributes: list[str] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
     timing: dict = field(default_factory=dict)  # policy_inference_avg_ms, env_step_avg_ms, …
@@ -545,6 +547,8 @@ class LocalLoader:
                 episode_step=int(d.get("episode_step") or 0),
                 instruction=d.get("instruction") or "",
                 instruction_type=d.get("instruction_type"),
+                instruction_fields=list(d.get("instruction_fields") or []),
+                instruction_fields_used=list(d.get("instruction_fields_used") or []),
                 attributes=list(d.get("attributes") or []),
                 metrics=_json_safe(d.get("metrics") or {}),
                 timing=_json_safe(d.get("timing") or {}),
