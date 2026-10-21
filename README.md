@@ -1,32 +1,12 @@
-<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ribble.gif"><img src="docs/images/ribble-dark.gif" alt="" height="42" align="absmiddle" /></picture> RoboLab Verified</h1>
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/ribble.gif"><img src="docs/images/ribble-dark.gif" alt="" height="42" align="absmiddle" /></picture> RoboLab</h1>
 
-[![offline tests](https://github.com/Manda-Robotics/RoboLab-Verified/actions/workflows/offline-tests.yml/badge.svg)](https://github.com/Manda-Robotics/RoboLab-Verified/actions/workflows/offline-tests.yml)
-
-RoboLab Verified is a fork of [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.2, a task-based simulation benchmark for robot manipulation policies built on [Isaac Lab](https://github.com/isaac-sim/IsaacLab). The fork keeps upstream's 120 tasks, scenes, success predicates and physics defaults. It changes how episodes are scored, how subtasks are credited, what the event log records, and what the sensors and recordings capture.
-
-<h4 align="center"><a href="docs/verified/README.md">Why this fork</a> · <a href="docs/verified/changes.md">Changes</a> · <a href="docs/verified/findings.md">Findings</a> · <a href="docs/verified/migration.md">Migration</a> · <a href="docs/verified/verification.md">Verification</a></h4>
+RoboLab is a task-based simulation benchmark for robot manipulation policies built on [Isaac Lab](https://github.com/isaac-sim/IsaacLab), based on [NVIDIA RoboLab](https://github.com/NVlabs/RoboLab) v0.3.2. It provides 120 manipulation tasks, configurable robot embodiments, policy integrations, and evaluation and recording tools.
 
 <h4 align="center"><a href="assets/objects/README.md">Objects</a> · <a href="assets/scenes/README.md">Scenes</a> · <a href="robolab/tasks/README.md">Tasks</a> · <a href="robolab/robots/README.md">Robots</a> · <a href="policies/README.md">Policy Clients</a></h4>
 
 <div align="center">
   <img src="docs/images/robolab.png" alt="RoboLab Overview" width="800"/>
 </div>
-
-## What is different
-
-Inspection of a 328-episode corpus produced with the upstream harness found the following. All 88 successes were declared while a target object was still moving. 64 % of logged "object grabbed" events occurred with the hand open. One task completed its subtask ladder at 0.07 s, before the arm had moved. In four of four successes of a stacking task, the wrong bowl was stacked. Each finding and its measurement is in [`docs/verified/findings.md`](docs/verified/findings.md).
-
-The changes by area follow; [`docs/verified/changes.md`](docs/verified/changes.md) documents each one with its evidence.
-
-- **Scoring**: a success is confirmed only after the targets are at rest. An episode ends as a failure once it can no longer succeed (a required object or the destination has left the table). Containment is capped at the rim.
-- **Subtask crediting**: conditions already true at reset earn no credit. Nothing is credited before the scene settles or before a placed object comes to rest. `score` is judged on the final frame; `score_peak` keeps the live number.
-- **Event log**: a grasp requires a carry. A pick is logged as `OBJECT_GRIPPED → OBJECT_CARRIED → OBJECT_GRABBED_SUCCESS`. Releases and drops are distinguished by the commanded gripper state. Wrong objects delivered into the goal are flagged. An object moving with an open hand marks the episode as a physics artifact. On the same tasks, π0.5's event count per episode fell from 45.5 to 31.0, and each remaining event corresponds to one physical transition.
-- **Sensing and recording**: both finger pads carry a contact sensor (upstream read one). The HDF5 records per-pad contact force and object-to-destination contact, so flag rules can be re-evaluated on existing recordings.
-- **Physics**: friction is a run parameter (`--friction`), read back from PhysX and written to every run directory. The default is upstream's. In a 32-episode-per-condition sweep, the success rate was insensitive to a 4× change in μ; the behaviour metrics were not ([`docs/physics.md`](docs/physics.md)).
-- **Embodiments and backends**: a bimanual YAM rig (two I2RT arms, the side-by-side station most bimanual data is collected on) with a client for Ai2's released MolmoAct 2 bimanual checkpoint ([`docs/bimanual_yam.md`](docs/bimanual_yam.md)), a dual-Franka rig, a bimanual ViperX (ALOHA) config (its asset is not shipped), and a connector for running a pointing-capable VLM as a policy.
-- **Tooling**: offline audits of task definitions and scenes that run without a simulator, and a verifier that evaluates each flag change as PASS / FAIL / N/A over recorded runs.
-
-Status: the offline suite (377 tests) passes locally after the v0.3.2 integration. Each change is marked RUNTIME, OFFLINE or NONE according to how it was verified. About 25 of the 120 tasks have been run against the patched code, most with π0.5 only. [`docs/verified/verification.md`](docs/verified/verification.md) lists the verification status of each change. Numbers reported from this fork should include the tag.
 
 ## Upstream News
 
@@ -61,7 +41,7 @@ sudo apt install ffmpeg git-lfs
 # sudo apt install libegl1 libgl1 libglvnd0 libopengl0 libglx0 libgles2 libglu1-mesa libxt6 libvulkan1 vulkan-tools git-lfs
 git lfs version               # must print a version: without git-lfs the two lfs commands below print an error and every USD stays a 132-byte pointer
 git lfs install
-git clone https://github.com/Manda-Robotics/RoboLab-Verified.git robolab
+git clone https://github.com/zmf2022/EmbodiedBench.git robolab
 cd robolab
 uv venv --python 3.12
 source .venv/bin/activate
@@ -208,7 +188,6 @@ See [docs/dashboard.md](docs/dashboard.md) for the feature tour, CLI flags, and 
 
 Full documentation is at [docs/README.md](docs/README.md), covering:
 
-- **RoboLab Verified**: [why](docs/verified/README.md), [changes](docs/verified/changes.md), [findings](docs/verified/findings.md), [migration](docs/verified/migration.md), [verification](docs/verified/verification.md), [physics](docs/physics.md)
 - [Objects](docs/objects.md), [Scenes](docs/scene.md), [Tasks](docs/task.md): creating and managing assets and benchmark tasks
 - [Robots](docs/robots.md), [Cameras](docs/camera.md), [Lighting](docs/lighting.md), [Backgrounds](docs/background.md): configuring simulation parameters
 - [Environment Registration](docs/environment_registration.md): combining tasks with robot/observation/action configs
@@ -236,7 +215,7 @@ Full documentation is at [docs/README.md](docs/README.md), covering:
 
 ## License
 
-RoboLab Verified is released under the [Apache License 2.0](./LICENSE), as is upstream RoboLab; see [NOTICE](./NOTICE). Third-party dependency licenses are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+RoboLab is released under the [Apache License 2.0](./LICENSE); see [NOTICE](./NOTICE). Third-party dependency licenses are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## Citation
 
@@ -254,7 +233,7 @@ RoboLab is the work of NVIDIA's Seattle Robotics Lab. If you use the benchmark, 
 }
 ```
 
-If your numbers were produced with this fork, say so and give the tag, e.g. "RoboLab Verified (`verified-rc7`, https://github.com/Manda-Robotics/RoboLab-Verified)". The differences from upstream are listed in [`docs/verified/changes.md`](docs/verified/changes.md).
+When reporting results, include the repository commit and simulator version.
 
 ## Contributing
 
