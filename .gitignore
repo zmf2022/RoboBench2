@@ -46,3 +46,8 @@ pyrightconfig.json
 .claude/scheduled_tasks.lock
 .claude/agents
 .claude/commands
+
+# Local credentials. Never commit: keys live in the environment, not the repo.
+.env
+.env.*
+!.env.example
