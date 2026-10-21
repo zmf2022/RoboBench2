@@ -30,12 +30,14 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 import numpy as np
+from dotenv import load_dotenv
 from openai import APIError, OpenAI
 from openai.types.chat import ChatCompletion
 from PIL import Image
 from scipy.spatial.transform import Rotation
 
 from robolab.core.task.instruction import InstructionInput, instruction_text
+from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict
 from robolab.eval.base_client import InferenceClient
 
 from policies.ai_native.common import prompts as _prompts
@@ -47,6 +49,8 @@ from policies.ai_native.direct_api.eef_specs import get_eef_spec
 from policies.ai_native.direct_api.inference_log import InferenceCallLogger
 from policies.ai_native.direct_api.setup import write_evaluation_artifacts
 from policies.ai_native.direct_api.trajectory import decode_anchored_bspline_trajectory
+
+load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=False)
 
 logger = logging.getLogger(__name__)
 
@@ -481,7 +485,7 @@ class AINativeClient(InferenceClient):
     def configure_environment(self, env_cfg) -> None:
         """Prepare prompts and evaluation artifacts before an episode starts."""
         if self.prompt_family in {"gripper_camera_geometry_prompt", "camera_geometry_prompt"}:
-            validate_droid_camera_calibration(env_cfg.to_dict())
+            validate_droid_camera_calibration(env_cfg_to_recording_dict(env_cfg))
         self._configure_control_timing(float(env_cfg.sim.dt * env_cfg.decimation))
         write_evaluation_artifacts(self)
 

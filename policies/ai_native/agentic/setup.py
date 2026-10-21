@@ -10,6 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import robolab.constants
+from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict
 from policies.ai_native.agentic.joint_actions import action_tools
 from policies.ai_native.agentic.prompts import policy_instructions
 from policies.ai_native.common.camera_geometry import DROID_CAMERA_CALIBRATION, validate_droid_camera_calibration
@@ -25,7 +26,7 @@ def configure_environment(client, env_cfg):
             raise ValueError("geometry prompt requires all three calibrated DROID cameras")
         if not math.isclose(control_dt_s, 1 / client.control.control_hz, abs_tol=1e-9):
             raise ValueError("Agent-EEF prompt control rate does not match simulator timing")
-        validate_droid_camera_calibration(env_cfg.to_dict())
+        validate_droid_camera_calibration(env_cfg_to_recording_dict(env_cfg))
         adapter = client.execution_adapter
         ik_limits = (adapter.max_translation_step_m, adapter.max_rotation_step_rad, adapter.max_joint_delta_rad)
         if ik_limits != (0.02, 0.1, 0.05):

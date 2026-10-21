@@ -12,10 +12,13 @@ import traceback
 from functools import partial
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Direct policy scripts otherwise resolve the editable ``robolab`` install
 # from the main checkout. Pin imports to this worktree so code and artifacts
 # come from the same repository root.
 REPO_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(REPO_ROOT / ".env", override=False)
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
