@@ -2,6 +2,19 @@
 
 This document describes the implemented policy inputs, outputs, and execution contracts.
 
+The separate [Orchestrated policy](orchestrated/README.md) reviews fresh π₀.₅
+H15 joint-position proposals. It retains GPT-as-Policy's `student`, `edit`, `eef`
+and `stop` modes, original gate/schema and two-camera observations. Each review
+selects a student prefix, a bounded trajectory edit, an EEF target, or an incomplete
+stop; the shared RoboLab loop executes native joint actions.
+Its host rejects interventions without an observed failure or misaligned next
+intent. It does not expose native progress, success, scores or remaining steps
+to the reviewer. `--review-backend codex` keeps a persistent App Server thread;
+`--review-backend api` sends a full episode conversation through Chat Completions,
+including review tool calls and their host validation receipts. Both use the
+same execution state machine. Runtime integration is implemented; live validation
+is pending.
+
 ## Policy surface
 
 | Policy | Backend | Model prompt | Model input | Model output | Robot controller |

@@ -286,6 +286,12 @@ def run(args_cli: argparse.Namespace, *, clients_by_env=None) -> None:
     from isaaclab.app import AppLauncher
     import robolab.constants
     from robolab.eval.runner import run_evaluation
+    from policies.ai_native.common.api_model import resolve_api_model
+
+    args_cli.model = resolve_api_model(
+        args_cli.model, base_url=args_cli.base_url,
+        api_key_env=args_cli.api_key_env, timeout=args_cli.timeout_s,
+    )
 
     # Model IDs commonly contain a provider slash. Preserve the recognizable name
     # while keeping RoboLab's output-directory and policy label path-safe.

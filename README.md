@@ -64,9 +64,11 @@ python -m pytest tests/ -q         # 仿真器集成检查，需要 GPU
 
 ### Astranomy
 
-提供 Direct-API（直接调用模型接口）和 Agentic（通过 Codex 持续对话控制机器人）两种方式。以下命令均在仓库根目录、激活 `.venv` 后执行，会产生模型调用费用。
+支持 Direct-API、Agentic 和 Orchestrated 三种策略。除 OpenPI 服务端命令外，均在仓库根目录、激活 `.venv` 后执行。运行策略会产生模型调用费用。
 
-**Direct-API**：配置支持 Chat Completions 的服务地址、密钥和模型名称，然后运行一个回合：
+#### Direct-API
+
+直接调用支持 Chat Completions 的模型服务生成动作：
 
 ```bash
 export OPENAI_API_KEY="你的密钥"
@@ -82,9 +84,11 @@ python policies/ai_native/direct_api/run.py \
   --visualizer kit --task RubiksCubeTask --num-envs 1 --num-runs 1
 ```
 
-使用其他服务商时，替换 `OPENAI_BASE_URL` 和 `AI_NATIVE_MODEL`。动作类型、历史观测和推理参数见 [Direct-API 参数说明](policies/ai_native/direct_api/README.md)。
+切换服务时修改 `OPENAI_BASE_URL`。单模型服务自动识别模型，多模型服务用 `--model` 或 `AI_NATIVE_MODEL` 选择；输出目录使用识别后的模型名。其他参数见 [Direct-API 文档](policies/ai_native/direct_api/README.md)。
 
-**Agentic**：默认 Codex 已安装并已登录，且当前账号可访问示例使用的 GPT-6.1 Sol。直接复用现有 Codex 配置和登录状态：
+#### Agentic
+
+通过 Codex 持续对话控制机器人。需已安装并登录 Codex，且账号可访问所选模型：
 
 ```bash
 python policies/ai_native/agentic/run.py \
@@ -92,12 +96,112 @@ python policies/ai_native/agentic/run.py \
   --headless --embodiment droid --task RubiksCubeTask \
   --seed 0 --num-envs 1 --num-runs 1 \
   --video-mode sensor --renderer realtime \
-  --output-folder-name gpt6-example --allow-model-requests
+  --allow-model-requests
 ```
 
-示例通过 `--model gpt-6.1-sol-medium` 选择 Sol 的中等思考强度；省略 `--model` 时，runner 默认使用 `gpt-6-astra-medium`，不会沿用 Codex 配置中的默认模型。现有 Codex 登录状态仍会复用。
+省略 `--model` 时默认使用 `gpt-6-astra-medium`。并行进程需使用独立输出目录。工具、历史记录和视频示范见 [Agentic 参数说明](policies/ai_native/agentic/README.md)。
 
-每个并行进程使用独立的输出目录；无需重新登录或另设 Codex 登录目录。工具、历史记录及视频示范配置见 [Agentic 参数说明](policies/ai_native/agentic/README.md)。Orchestrated 策略尚未提供。
+<a id="orchestrated"></a>
+
+#### Orchestrated
+
+π₀.₅ 生成候选动作，GPT 决定放行或短时纠偏。先启动 π₀.₅ 服务，再选择 API 或 Codex 调用 GPT，当前支持单个 DROID 环境。
+
+##### 1. 启动 π₀.₅ 服务
+
+按 [π₀ family 安装说明](policies/pi0_family/README.md#install-the-server)准备独立的 OpenPI 环境和 π₀.₅ 权重。本项目已包含客户端；已有环境可补装：
+
+```bash
+uv pip install --python .venv/bin/python -e packages/openpi-client
+```
+
+在 OpenPI 源码目录启动服务，默认端口为 `8000`：
+
+```bash
+cd /path/to/openpi
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 uv run scripts/serve_policy.py policy:checkpoint \
+  --policy.config=pi05_droid_jointpos_polaris \
+  --policy.dir=/mnt/datadisk/models/RLinf/pi05_droid_jointpos_polaris
+```
+
+##### 2. 运行评测
+
+π₀.₅ 服务启动后，在本仓库根目录选择一种方式运行评测。
+
+###### 仅使用 π₀.₅
+
+直接执行 π₀.₅ 动作，不使用 LLM 审核或纠偏，无需配置 GPT：
+
+```bash
+source .venv/bin/activate
+python policies/pi0_family/run.py \
+  --policy pi05 \
+  --headless --task RubiksCubeTask --seed 0 --num-envs 1 --num-runs 1 \
+  --remote-host localhost --remote-port 8000 \
+  --video-mode sensor --renderer realtime
+```
+
+###### 通过 API 调用 GPT
+
+与 Direct-API 使用相同的 `.env` 或环境变量配置，服务需支持图像和工具调用：
+
+```bash
+source .venv/bin/activate
+export OPENAI_API_KEY="你的 API 密钥"
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+export AI_NATIVE_MODEL="gpt-6-astra"
+python policies/ai_native/orchestrated/run.py \
+  --review-backend api --reasoning-effort medium \
+  --max-completion-tokens 8192 \
+  --headless --task RubiksCubeTask --seed 0 --num-envs 1 --num-runs 1 \
+  --remote-host localhost --remote-port 8000 --allow-model-requests \
+  --video-mode sensor --renderer realtime
+```
+
+本地服务设置 `OPENAI_BASE_URL="http://主机:端口/v1"`，模型识别规则同 Direct-API。无鉴权时密钥填 `local`；不支持思考强度时加 `--reasoning-effort none`。
+
+###### 通过 Codex 调用 GPT
+
+需已安装并登录 Codex，且账号可访问所选模型。省略 `--review-backend` 时默认使用此方式：
+
+```bash
+source .venv/bin/activate
+python policies/ai_native/orchestrated/run.py \
+  --review-backend codex \
+  --headless --task RubiksCubeTask --seed 0 --num-envs 1 --num-runs 1 \
+  --remote-host localhost --remote-port 8000 \
+  --model gpt-6.1-sol-medium --allow-model-requests \
+  --video-mode sensor --renderer realtime
+```
+
+###### 全任务对比：π₀.₅ 与 π₀.₅＋VLM
+
+启动 π₀.₅ 服务后，修改以下参数值运行：
+
+```bash
+PYTHON_BIN=.venv/bin/python DEVICE=cuda:0 PI05_NUM_ENVS=5 NUM_RUNS=5 SEED=0 VIDEO_MODE=sensor REMOTE_HOST=localhost REMOTE_PORT=8000 OPENAI_BASE_URL=http://127.0.0.1:8080/v1 OPENAI_API_KEY=local REASONING_EFFORT=medium bash scripts/eval_pi05_vs_vlm.sh
+```
+
+脚本依次评测两组策略，覆盖全部 `benchmark` 任务，每任务默认各评估 5 次：纯 π₀.₅ 为 5 环境 × 1 轮，π₀.₅＋VLM 为 1 环境 × 5 轮。`NUM_RUNS` 表示每任务总回合数，需为 `PI05_NUM_ENVS` 的整数倍；两组使用相同 seed 和默认指令，结果分别保存。
+
+默认使用 GPU 0，5 环境配置尚未进行显存压力验证。当前并行仅支持同一任务的多个回合，跨任务环境队列尚未实现；组合策略仍为单路审核，暂不支持 2 环境。
+
+`REMOTE_HOST` / `REMOTE_PORT` 为 π₀.₅ 地址；`OPENAI_BASE_URL` 为 VLM 地址，单模型服务自动识别模型。有鉴权时替换密钥 `local`；不支持思考强度时设 `REASONING_EFFORT=none`；不录像时设 `VIDEO_MODE=none`。
+
+VLM 主动停止或审核预算耗尽时，该回合记录为 `incomplete`，随后继续评测。纯 π₀.₅ 可通过[多个客户端](policies/pi0_family/README.md#run-evaluation)同时评测不同任务，共用一个服务。
+
+##### 3. 查看结果
+
+输出目录自动按时间戳、策略和模式命名：
+
+```text
+output/<时间戳>_pi05/<任务环境>/
+output/<时间戳>_orchestrated_pi05_<api或codex>_<模型名>/<任务环境>/
+```
+
+续跑时指定 `--output-folder-name <已有目录名>`。
+
+需要 GUI 时，将 `--headless` 替换为 `--visualizer kit`。π₀.₅ 服务地址通过 `--remote-host` / `--remote-port` 或 `--remote-uri` 设置；GPT 服务地址在 API 模式下通过 `OPENAI_BASE_URL` 设置。其他参数及日志说明见 [Orchestrated 文档](policies/ai_native/orchestrated/README.md)。
 
 <a id="docker"></a>
 

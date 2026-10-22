@@ -14,6 +14,7 @@ It depends on the following third-party open-source packages, each governed by i
 | numpy | 1.26.0 | BSD-3-Clause | https://github.com/numpy/numpy/blob/main/LICENSE.txt |
 | gymnasium | 1.2.0 | MIT | https://github.com/Farama-Foundation/Gymnasium/blob/main/LICENSE |
 | openai | 2.28.0 | Apache-2.0 | https://github.com/openai/openai-python/blob/main/LICENSE |
+| openpi-client | 0.1.0 (bundled) | Apache-2.0 | [License text](LICENSE) |
 | requests | 2.32.3 | Apache-2.0 | https://github.com/psf/requests/blob/main/LICENSE |
 | json-numpy | 2.1.1 | MIT | https://github.com/Crimson-Crow/json-numpy/blob/main/LICENSE.txt |
 | pyzmq | 27.1.0 | BSD-3-Clause | https://github.com/zeromq/pyzmq/blob/main/LICENSE.md |
@@ -51,6 +52,26 @@ The following are not Python packages and must be installed via the host OS pack
 | Component | Source | Notes |
 |---|---|---|
 | ffmpeg | distro package (`apt install ffmpeg`, etc.) | Used for video recording. License terms are governed by the distribution's ffmpeg build. |
+
+## Bundled source packages
+
+`packages/openpi-client` contains the OpenPI Python client from
+[Physical-Intelligence/openpi](https://github.com/Physical-Intelligence/openpi),
+under Apache-2.0, whose terms are included in the root [LICENSE](LICENSE).
+The copied revision is `00a968d05b936af959607218a3f1d0bad58a9a44`.
+Only the five runtime modules used by RoboLab are bundled. A local codec check
+rejects NumPy 2 variable-width strings unsupported by the wire format; other
+runtime source is unchanged. The package is installed from this repository
+through the root `pyproject.toml` and `uv.lock`.
+
+## Adapted policy code
+
+The Orchestrated policy's `gate_assessment.py`, `schema.py` and `edited_targets`
+function in `kinematics.py` originate from
+[GPT-as-Policy's RoboLab integration](https://github.com/anonymous-report-421/GPT-as-Policy/tree/main/hybrid_rollout/robolab).
+License: [MIT](https://github.com/anonymous-report-421/GPT-as-Policy/blob/main/LICENSE).
+See its [integration boundary](policies/ai_native/orchestrated/README.md#integration-boundary)
+for simulator and LLM transport adaptations.
 
 ## Bundled assets
 

@@ -53,7 +53,10 @@ export OPENAI_BASE_URL="https://your-provider.example/v1"
 export AI_NATIVE_MODEL="provider/model-id"
 ```
 
-`OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`. `AI_NATIVE_MODEL` defaults to `gpt-6-astra`. Set it explicitly when your provider uses a different model ID.
+`OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`. Startup queries
+`/v1/models`: a single model is selected automatically; multiple models require
+a matching `--model` or `AI_NATIVE_MODEL` (default `gpt-6-astra`). Requests, logs
+and default output names use the selected ID. Query failures stop startup.
 
 List models visible to the key:
 

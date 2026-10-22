@@ -9,10 +9,11 @@ For pi0-family variants, pass `--policy {pi0,pi0_fast,pi05,paligemma,paligemma_f
 
 1. Clone [`git@github.com:xuningy/openpi.git`](https://github.com/xuningy/openpi) and follow install instructions there. **Do not** install OpenPI in the same virtual environment as RoboLab — it runs separately.
 
-2. Install the OpenPI **client** in the RoboLab environment:
+2. The OpenPI **client** is bundled at [`packages/openpi-client`](../../packages/openpi-client/README.md)
+   and installed by the root `uv sync --extra isaac60 --extra test`. To add it to
+   an existing RoboLab environment, run from this repository's root:
    ```bash
-   cd robolab
-   uv pip install -e ../openpi/packages/openpi-client
+   uv pip install --python .venv/bin/python -e packages/openpi-client
    ```
 
 ## Start the policy server
@@ -62,6 +63,18 @@ uv run python policies/pi0_family/run.py --policy pi05 --remote-host <HOST> --re
 ```
 
 A full WebSocket URI (e.g. a hosted endpoint) can be passed with `--remote-uri`, which overrides `--remote-host` / `--remote-port`.
+
+Multiple evaluation processes can share the same server and run different tasks.
+Give each process its own output directory:
+
+```bash
+.venv/bin/python policies/pi0_family/run.py --policy pi05 --headless --task BananaInBowlTask --remote-port 8000 --output-folder-name "$(date +%Y-%m-%d_%H-%M-%S)_pi05_banana" &
+.venv/bin/python policies/pi0_family/run.py --policy pi05 --headless --task RubiksCubeTask --remote-port 8000 --output-folder-name "$(date +%Y-%m-%d_%H-%M-%S)_pi05_cube" &
+wait
+```
+
+Run from the repository root. Requests are handled sequentially by the model
+server; each simulator process uses additional GPU memory.
 
 ## Variation scripts
 

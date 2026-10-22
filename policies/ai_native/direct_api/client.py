@@ -41,6 +41,7 @@ from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict
 from robolab.eval.base_client import InferenceClient
 
 from policies.ai_native.common import prompts as _prompts
+from policies.ai_native.common.api_model import list_available_models
 from policies.ai_native.common.agent_eef import agent_eef_state, format_agent_eef_state
 from policies.ai_native.common.prompts import DROID_EEF_FRAME_PROMPT, DROID_ROBOT_PROMPT
 from policies.ai_native.common.token_usage import TokenUsageTracker
@@ -243,34 +244,6 @@ def _tool_call(response: Mapping[str, Any]) -> Mapping[str, Any]:
     if not valid_count or len(calls) != 1:
         raise RuntimeError("model must return exactly one tool call")
     return calls[0]
-
-
-def list_available_models(
-    *,
-    api_key: str | None = None,
-    api_key_env: str = DEFAULT_API_KEY_ENV,
-    base_url: str | None = None,
-    timeout_s: float = 30.0,
-    client: OpenAI | None = None,
-) -> list[str]:
-    """Return model IDs visible to the configured OpenAI-compatible API key."""
-    resolved_key = _resolve_api_key(api_key, api_key_env)
-    resolved_base_url = _resolve_base_url(base_url)
-    owns_client = client is None
-    sdk = client or OpenAI(
-        api_key=resolved_key,
-        base_url=resolved_base_url,
-        timeout=timeout_s,
-    )
-    try:
-        page = sdk.models.list()
-    finally:
-        if owns_client:
-            sdk.close()
-    try:
-        return sorted(str(item.id) for item in page.data if getattr(item, "id", None))
-    except (AttributeError, TypeError) as exc:
-        raise RuntimeError("API provider /models returned a malformed response") from exc
 
 
 class AINativeClient(InferenceClient):

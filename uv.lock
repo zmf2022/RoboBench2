@@ -2492,6 +2492,30 @@ wheels = [
 ]
 
 [[package]]
+name = "openpi-client"
+version = "0.1.0"
+source = { editable = "packages/openpi-client" }
+dependencies = [
+    { name = "msgpack" },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "typing-extensions" },
+    { name = "websockets" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "msgpack", specifier = ">=1.0.5" },
+    { name = "numpy", specifier = ">=1.22.4" },
+    { name = "pillow", specifier = ">=9.0.0" },
+    { name = "typing-extensions", specifier = ">=4.5.0" },
+    { name = "websockets", specifier = ">=11.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.4" }]
+
+[[package]]
 name = "osqp"
 version = "1.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -3147,6 +3171,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openai" },
     { name = "opencv-python" },
+    { name = "openpi-client" },
     { name = "pandas" },
     { name = "pillow" },
     { name = "python-dotenv" },
@@ -3196,6 +3221,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "openai" },
     { name = "opencv-python" },
+    { name = "openpi-client", editable = "packages/openpi-client" },
     { name = "pandas" },
     { name = "pillow" },
     { name = "pytest", marker = "extra == 'all'" },

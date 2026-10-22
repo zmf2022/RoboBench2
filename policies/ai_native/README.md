@@ -11,6 +11,6 @@ For environment installation and backend selection, start with the
 |---|---|---|---|
 | Direct-API (Direct Policy) | Astra predicts robot actions directly through API calls. | Available | [Direct-API README](direct_api/README.md) |
 | Agentic | Astra controls the robot through Codex, with conversation history and optional tools. | Available | [Agentic README](agentic/README.md) |
-| Orchestrated | Astra reviews actions proposed by a robot foundation policy and decides when to intervene. | Coming soon | — |
+| Orchestrated | Astra reviews fresh π₀.₅ proposals through Codex or direct API, using the original student/edit/eef/stop contract. | Available; live validation pending | [Orchestrated README](orchestrated/README.md) |
 
 Each policy's README covers its setup, supported features, configuration, and usage.
