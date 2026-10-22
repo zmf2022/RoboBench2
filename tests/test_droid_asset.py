@@ -7,7 +7,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ASSET = REPO_ROOT / "assets" / "robots" / "franka_robotiq_2f_85_isaac60.usd"
+ASSET = REPO_ROOT / "assets" / "robots" / "franka_robotiq_2f_85_flattened.usd"
 DROID_CONFIG = REPO_ROOT / "robolab" / "robots" / "droid.py"
 GRIPPER_ROOT = "/panda/Gripper/Robotiq_2F_85"
 GRIPPER_LINKS = (
@@ -23,13 +23,13 @@ GRIPPER_LINKS = (
 )
 
 
-def test_droid_config_uses_isaac60_rendering_asset():
+def test_droid_config_uses_shipped_robot_asset():
     assert ASSET.is_file()
     source = DROID_CONFIG.read_text()
-    assert '"franka_robotiq_2f_85_isaac60.usd"' in source
+    assert '"franka_robotiq_2f_85_flattened.usd"' in source
 
 
-def test_isaac60_asset_preserves_robot_structure_without_instanceable_visuals():
+def test_shipped_asset_preserves_upstream_robot_structure():
     pytest.importorskip("pxr", reason="USD Python bindings are provided by Isaac Sim")
     from pxr import Usd, UsdGeom, UsdPhysics
 
@@ -43,4 +43,11 @@ def test_isaac60_asset_preserves_robot_structure_without_instanceable_visuals():
     assert sum(prim.HasAPI(UsdPhysics.CollisionAPI) for prim in prims) == 28
     assert sum(prim.IsA(UsdGeom.Mesh) for prim in prims) == 22
     assert all(stage.GetPrimAtPath(f"{GRIPPER_ROOT}/{link}") for link in GRIPPER_LINKS)
-    assert not [prim.GetPath() for prim in prims if prim.IsInstanceable()]
+    # The upstream visual prototypes stay instanceable (the de-instanced variants were removed).
+    assert sum(prim.IsInstanceable() for prim in stage.Traverse()) == 8
+    # Upstream 6 mm pad colliders: the towing artifact is present, not patched here.
+    for prim in prims:
+        if prim.HasAPI(UsdPhysics.CollisionAPI) and prim.GetName().startswith(
+            "Defeatured_2F_85_PAD_OPEN_finger"
+        ):
+            assert prim.GetAttribute("physics:approximation").Get() == "convexDecomposition"

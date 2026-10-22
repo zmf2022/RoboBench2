@@ -125,13 +125,13 @@ Defects that no change above removes.
 - The "stuck to a finger" artifact is understood and flagged (P124, [towing.md](towing.md)): an
   object feature pushed through the 6 mm pad collider and hooked behind it while `finger_joint`
   sits at a hard limit. Tier-A tows in 7.8 % of the six `cli_*` corpora; `tows_*.json` per
-  episode, `physics_artifact` on the episode row. The solid-pad asset removes it in a controlled
-  replay (4/4 to 0/4) but is not the default until grasping is re-validated with it.
+  episode, `physics_artifact` on the episode row. A solid-pad variant removed it in a controlled
+  replay (4/4 to 0/4); the shipped rig is the upstream thin-pad asset.
 - Rigid food. A bagel is a rigid mesh: a finger through the hole does not hold, so a
   strategy that works on a real bagel fails here.
-- Isaac Sim 6.0 renders the Robotiq gripper as detached fragments in some scenes (a
-  policy input), observed in three of five sampled tasks and absent in two. Not present on
-  Isaac Sim 5.1, which this fork targets.
+- Isaac Sim 6.0 renders the Robotiq gripper as detached fragments in some scenes (not
+  reproduced locally on the current GPU/driver; see `docs/robots.md`). Not present on
+  Isaac Sim 5.1.
 - The confidence intervals the dashboard shows differ from the Beta intervals the docs
   describe in some cells (H-E1, H-E2).
 - `MarkerInMugTask`: the marker in `workdesk.usda` drops 7.1 mm at reset (`scripts/find_sinking_objects.py`, found in the first external trial). Not re-authored; reported like the other unsettled objects.

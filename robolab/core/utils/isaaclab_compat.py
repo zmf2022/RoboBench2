@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Compatibility helpers for Isaac Lab 2.x and 3.x.
+"""Public-state and recording adapters for Isaac Lab.
 
 RoboLab's public and recorded quaternion convention remains ``(w, x, y, z)``.
 Isaac Lab 3.x changed its simulation, sensor, and math APIs to ``(x, y, z, w)``
-and exposes most state through ``ProxyArray`` objects.  Keeping those details in
-one module makes recordings portable between Isaac Sim 5 and 6.
+and exposes most state through ``ProxyArray`` objects. Simulation configs and
+math now use native XYZW throughout; only external WXYZ data is converted.
+These adapters keep historical recordings readable on Isaac Sim 6.
 
 This module deliberately does not import Isaac Lab.  It is safe to import before
 ``AppLauncher`` creates the Isaac Sim application.
@@ -153,55 +154,40 @@ def scene_state_from_isaaclab(state: dict) -> dict:
     return _convert_scene_state(state, to_isaaclab=False)
 
 
-def _convert_config_rotations(value: Any, *, to_isaaclab: bool, seen: set[int]) -> None:
-    """Recursively convert config fields named ``rot`` in place."""
-    if value is None or isinstance(value, (str, bytes, int, float, bool, torch.Tensor, np.ndarray)):
-        return
-    value_id = id(value)
-    if value_id in seen:
-        return
-    seen.add(value_id)
+def _convert_serialized_config_rotations(value: Any, converter):
+    """Copy a serialized config, converting its declared ``rot`` fields.
 
-    converter = quat_wxyz_to_isaaclab if to_isaaclab else quat_isaaclab_to_wxyz
+    Only serialized containers are visited. Never walk or mutate runtime
+    config objects, inherited defaults, or frozen metadata.
+    """
     if isinstance(value, dict):
-        for key, child in value.items():
-            if key == "rot" and isinstance(child, (tuple, list)) and len(child) == 4:
-                value[key] = converter(child)
-            else:
-                _convert_config_rotations(child, to_isaaclab=to_isaaclab, seen=seen)
-        return
-    if isinstance(value, list):
-        for child in value:
-            _convert_config_rotations(child, to_isaaclab=to_isaaclab, seen=seen)
-        return
-    if isinstance(value, tuple):
-        for child in value:
-            _convert_config_rotations(child, to_isaaclab=to_isaaclab, seen=seen)
-        return
-    if hasattr(value, "__dict__"):
-        for key, child in vars(value).items():
-            if key == "rot" and isinstance(child, (tuple, list)) and len(child) == 4:
-                setattr(value, key, converter(child))
-            else:
-                _convert_config_rotations(child, to_isaaclab=to_isaaclab, seen=seen)
-
-
-def prepare_env_cfg(env_cfg: Any) -> Any:
-    """Convert authored WXYZ config rotations for Isaac Lab 3, once per config."""
-    if not ISAACLAB_USES_XYZW or getattr(env_cfg, "_robolab_quaternions_prepared", False):
-        return env_cfg
-    _convert_config_rotations(env_cfg, to_isaaclab=True, seen=set())
-    env_cfg._robolab_quaternions_prepared = True
-    return env_cfg
+        return {
+            key: converter(child)
+            if key == "rot" and isinstance(child, (tuple, list)) and len(child) == 4
+            else _convert_serialized_config_rotations(child, converter)
+            for key, child in value.items()
+        }
+    if isinstance(value, (tuple, list)):
+        return type(value)(_convert_serialized_config_rotations(child, converter) for child in value)
+    return value
 
 
 def env_cfg_to_recording_dict(env_cfg: Any) -> dict:
     """Serialize a config with version-independent WXYZ ``rot`` fields."""
     result = env_cfg.to_dict()
-    if ISAACLAB_USES_XYZW:
-        _convert_config_rotations(result, to_isaaclab=False, seen=set())
+    result = _convert_serialized_config_rotations(result, quat_isaaclab_to_wxyz)
     result.pop("_robolab_quaternions_prepared", None)
     return result
+
+
+def recorded_env_cfg_to_isaaclab(recorded: dict) -> dict:
+    """Copy historical/public WXYZ config values into the native convention.
+
+    This is the inverse of ``env_cfg_to_recording_dict``. Replay must convert
+    the serialized input before overlaying a native config, never reorder the
+    mixed result in place. Recordings remain reusable across repeated imports.
+    """
+    return _convert_serialized_config_rotations(recorded, quat_wxyz_to_isaaclab)
 
 
 def write_root_pose(asset: Any, root_pose: torch.Tensor, env_ids=None) -> None:

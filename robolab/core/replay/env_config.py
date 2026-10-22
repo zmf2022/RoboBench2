@@ -24,6 +24,7 @@ import re
 from isaaclab.utils.string import string_to_callable
 
 from robolab.constants import ASSET_DIR
+from robolab.core.utils.isaaclab_compat import recorded_env_cfg_to_isaaclab
 
 # Namespaces that must come from the current invocation (host/runtime state),
 # never from the recording. ``num_envs``/``env_spacing`` are CLI choices,
@@ -78,7 +79,7 @@ def apply_recorded_env_cfg(env_cfg, recorded: dict) -> list[str]:
         config matched the current schema exactly).
     """
     skipped: list[str] = []
-    _overlay(env_cfg, recorded, "", skipped)
+    _overlay(env_cfg, recorded_env_cfg_to_isaaclab(recorded), "", skipped)
     return skipped
 
 
@@ -98,8 +99,8 @@ def _reroot_asset_path(value: str) -> str:
         rel = value.split(marker, 1)[1]
         out = os.path.join(ASSET_DIR, rel)
         if os.path.basename(rel).startswith("franka_robotiq_2f_85"):
-            # The robot asset follows ROBOLAB_ROBOT_USD (towing.md); a recording made with a rig
-            # variant this checkout does not ship (the Isaac 6.0 asset) replays on the default rig.
+            # The robot asset follows ROBOLAB_ROBOT_USD (towing.md); a recording made with a
+            # removed rig variant replays on the one shipped rig.
             override = os.environ.get("ROBOLAB_ROBOT_USD")
             if override:
                 return override

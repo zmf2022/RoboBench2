@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image
 
 from policies.ai_native.agentic.app_server import (
-    ASTRA_MODEL_IDS,
+    AGENTIC_MODEL_IDS,
     AppServerError,
     EpisodeMemory,
     PersistentAppServerSession,
@@ -181,8 +181,8 @@ class CodexAgentEEFSession:
             raise ValueError("spec must be an EmbodimentSpec")
         if allow_model_requests is not True:
             raise ValueError("Real model transport requires explicit allow_model_requests=True")
-        if model_id not in ASTRA_MODEL_IDS:
-            raise ValueError("Use an exact supported Astra model ID")
+        if model_id not in AGENTIC_MODEL_IDS:
+            raise ValueError("Use an exact supported Agentic model ID")
         if not math.isfinite(timeout) or not 0 < timeout <= 300:
             raise ValueError("timeout must be in (0, 300]")
         if type(image_size) is not int or not 128 <= image_size <= 2048:

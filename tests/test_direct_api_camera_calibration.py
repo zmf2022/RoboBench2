@@ -22,13 +22,13 @@ class _EnvironmentConfig:
     def __init__(self):
         self.sim = SimpleNamespace(dt=1 / 120)
         self.decimation = 8
-        self.scene = {"robot": {"init_state": {"pos": [0, 0, 0], "rot": [1, 0, 0, 0]}}}
+        self.scene = {"robot": {"init_state": {"pos": [0, 0, 0], "rot": compat.quat_wxyz_to_isaaclab([1, 0, 0, 0])}}}
         for name, expected in DROID_CAMERA_CALIBRATION.items():
             suffix = ("/robot/Gripper/Robotiq_2F_85/base_link/wrist_cam"
                       if name == "wrist_cam" else f"/{name}")
             self.scene[name] = {
                 "prim_path": "/World" + suffix,
-                "offset": {"convention": "opengl", "pos": expected["pos"], "rot": expected["rot"]},
+                "offset": {"convention": "opengl", "pos": expected["pos"], "rot": compat.quat_wxyz_to_isaaclab(expected["rot"])},
                 "spawn": {"focal_length": expected["focal_length"],
                           "horizontal_aperture": 5.376, "vertical_aperture": 3.024},
                 "width": 640, "height": 360,
@@ -45,10 +45,9 @@ def test_calibration_uses_public_config_without_weakening_validation(monkeypatch
     monkeypatch.setattr(compat, "ISAACLAB_USES_XYZW", uses_xyzw)
     cfg = _EnvironmentConfig()
     if mismatch == "robot":
-        cfg.scene["robot"]["init_state"]["rot"] = [0, 1, 0, 0]
+        cfg.scene["robot"]["init_state"]["rot"] = compat.quat_wxyz_to_isaaclab([0, 1, 0, 0])
     elif mismatch == "camera":
-        cfg.scene["wrist_cam"]["offset"]["rot"] = [1, 0, 0, 0]
-    compat.prepare_env_cfg(cfg)
+        cfg.scene["wrist_cam"]["offset"]["rot"] = compat.quat_wxyz_to_isaaclab([1, 0, 0, 0])
     native_config = cfg.to_dict()
 
     client = object.__new__(direct_api.AINativeClient)

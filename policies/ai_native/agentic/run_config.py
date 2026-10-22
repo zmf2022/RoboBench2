@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 import robolab.constants
-from policies.ai_native.agentic.app_server import ASTRA_MODEL_IDS, resolve_agent_memory_root
+from policies.ai_native.agentic.app_server import AGENTIC_MODEL_IDS, resolve_agent_memory_root
 from policies.ai_native.agentic.client import AgentEEFControlConfig, CodexAgentEEFClient
 from policies.ai_native.agentic.droid_joint_target import DroidJointTargetAdapter
 from policies.ai_native.agentic.runtime_options import RuntimeOptions
@@ -60,7 +60,7 @@ def add_agent_eef_args(parser: argparse.ArgumentParser) -> None:
         help="Maximum latest synchronized image/proprioception observations sent per inference call.",
     )
     parser.add_argument("--embodiment", choices=sorted(DEFAULT_CAMERAS), default="droid")
-    parser.add_argument("--model", choices=sorted(ASTRA_MODEL_IDS), default="gpt-6-astra-medium")
+    parser.add_argument("--model", choices=sorted(AGENTIC_MODEL_IDS), default="gpt-6-astra-medium")
     parser.add_argument("--allow-model-requests", "--allow_model_requests", action="store_true")
     parser.add_argument("--codex-bin", "--codex_bin", default="codex")
     parser.add_argument("--decision-timeout", "--decision_timeout", type=float, default=120.0)
@@ -130,8 +130,8 @@ def build_session_factory(
     spec: EmbodimentSpec,
     session_class=CodexAgentEEFSession,
 ) -> Callable[[int, int], object]:
-    if args.model not in ASTRA_MODEL_IDS:
-        raise ValueError("Use an exact supported Astra model ID")
+    if args.model not in AGENTIC_MODEL_IDS:
+        raise ValueError("Use an exact supported Agentic model ID")
     if args.allow_model_requests is not True:
         raise ValueError("Real model requests require --allow-model-requests")
     if type(args.history_length) is not int or args.history_length < 1:

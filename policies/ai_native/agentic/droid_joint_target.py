@@ -20,6 +20,7 @@ from scipy.spatial.transform import Rotation
 
 from policies.ai_native.agentic.joint_actions import bounded_joint_action
 from policies.ai_native.common.agent_eef import AgentEEFPlan
+from robolab.core.utils.isaaclab_compat import as_torch, quat_isaaclab_to_wxyz
 
 ARM_JOINT_NAMES = tuple(f"panda_joint{index}" for index in range(1, 8))
 EEF_BODY_NAME = "base_link"
@@ -160,10 +161,10 @@ class DroidJointTargetAdapter:
         body_id = body_names.index(EEF_BODY_NAME)
 
         joint_positions_all = _array(
-            robot.data.joint_pos[env_id], shape=(len(joint_names),), name="robot joint positions"
+            as_torch(robot.data.joint_pos)[env_id], shape=(len(joint_names),), name="robot joint positions"
         )
         limits_all = _array(
-            robot.data.soft_joint_pos_limits[env_id], shape=(len(joint_names), 2), name="DROID soft joint limits"
+            as_torch(robot.data.soft_joint_pos_limits)[env_id], shape=(len(joint_names), 2), name="DROID soft joint limits"
         )
         if "joint_target" in plan.metadata:
             return bounded_joint_action(
@@ -171,11 +172,13 @@ class DroidJointTargetAdapter:
                 self.max_joint_delta_rad,
             )
 
-        root_position = _array(robot.data.root_pos_w[env_id], shape=(3,), name="robot root position")
-        root_quaternion = _unit_quaternion(robot.data.root_quat_w[env_id], "robot root quaternion")
-        body_position = _array(robot.data.body_pos_w[env_id, body_id], shape=(3,), name="EEF body position")
+        root_position = _array(as_torch(robot.data.root_pos_w)[env_id], shape=(3,), name="robot root position")
+        root_quaternion = _unit_quaternion(
+            quat_isaaclab_to_wxyz(as_torch(robot.data.root_quat_w)[env_id]), "robot root quaternion"
+        )
+        body_position = _array(as_torch(robot.data.body_pos_w)[env_id, body_id], shape=(3,), name="EEF body position")
         body_quaternion = _unit_quaternion(
-            robot.data.body_quat_w[env_id, body_id], "EEF body quaternion"
+            quat_isaaclab_to_wxyz(as_torch(robot.data.body_quat_w)[env_id, body_id]), "EEF body quaternion"
         )
         root_inverse = _rotation(root_quaternion).inv()
         current_position = root_inverse.apply(body_position - root_position)
@@ -186,7 +189,9 @@ class DroidJointTargetAdapter:
         jacobian_body = body_id - 1 if fixed_base else body_id
         if jacobian_body < 0:
             raise DroidEEFControlError("cannot control an omitted fixed root body")
-        all_jacobians = np.asarray(robot.root_physx_view.get_jacobians()[env_id].detach().cpu(), dtype=np.float64)
+        all_jacobians = np.asarray(
+            as_torch(robot.root_physx_view.get_jacobians())[env_id].detach().cpu(), dtype=np.float64
+        )
         if all_jacobians.ndim != 3 or jacobian_body >= all_jacobians.shape[0]:
             raise DroidEEFControlError("unexpected PhysX Jacobian shape")
         columns = joint_ids if fixed_base else [index + 6 for index in joint_ids]
@@ -227,7 +232,7 @@ class DroidJointTargetAdapter:
         if any(joint_names.count(name) != 1 for name in (*ARM_JOINT_NAMES, "finger_joint")):
             raise DroidEEFControlError("DROID joint names do not match the bounded EEF controller")
         positions = _array(
-            robot.data.joint_pos[env_id], shape=(len(joint_names),), name="robot joint positions"
+            as_torch(robot.data.joint_pos)[env_id], shape=(len(joint_names),), name="robot joint positions"
         )
         arm = positions[[joint_names.index(name) for name in ARM_JOINT_NAMES]].astype(np.float32)
         gripper_closed = positions[joint_names.index("finger_joint")] > math.pi / 8

@@ -36,12 +36,12 @@ from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import TiledCameraCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
 
 from robolab.constants import ROBOTS_DIR
 from robolab.core.environments.scene_fixture import FRANKA_TABLE_FIXTURE
+from robolab.core.observations.robot_state import body_pose_in_robot_root
 from robolab.core.sensors.body_attached_camera import BodyAttachedTiledCameraCfg
-from robolab.robots.droid import _to_torch
+from robolab.core.utils.isaaclab_compat import as_torch as _to_torch
 
 ARMS = ("left", "right")
 ARM_JOINT_NAMES = {side: [f"{side}_joint{i}" for i in range(1, 7)] for side in ARMS}
@@ -85,14 +85,14 @@ def _pinhole(hfov_deg: float) -> sim_utils.PinholeCameraCfg:
 
 
 def _quat_from_columns(right, down, forward) -> tuple[float, float, float, float]:
-    """(w, x, y, z) of the rotation whose columns are the ROS optical axes (x right, y down,
+    """(x, y, z, w) of the rotation whose columns are the ROS optical axes (x right, y down,
     z forward) expressed in the parent frame."""
     m = np.array([right, down, forward], dtype=float).T
     w = math.sqrt(max(0.0, 1.0 + m[0, 0] + m[1, 1] + m[2, 2])) / 2.0
     x = math.copysign(math.sqrt(max(0.0, 1.0 + m[0, 0] - m[1, 1] - m[2, 2])) / 2.0, m[2, 1] - m[1, 2])
     y = math.copysign(math.sqrt(max(0.0, 1.0 - m[0, 0] + m[1, 1] - m[2, 2])) / 2.0, m[0, 2] - m[2, 0])
     z = math.copysign(math.sqrt(max(0.0, 1.0 - m[0, 0] - m[1, 1] + m[2, 2])) / 2.0, m[1, 0] - m[0, 1])
-    return (w, x, y, z)
+    return (x, y, z, w)
 
 
 # Top camera: 0.15 m ahead of the bases, 0.80 m up, optical axis 80 deg below horizontal
@@ -149,7 +149,7 @@ def set_top_camera(variant: str) -> None:
 
 # Wrist cameras: I2RT station README, flange -> camera, ROS optical (+z forward).
 _WRIST_OFFSET_POS = (-0.0704, 0.0, -0.077)
-_WRIST_OFFSET_ROT = (0.1531, 0.6903, 0.6903, 0.1530)
+_WRIST_OFFSET_ROT = (0.6903, 0.6903, 0.1530, 0.1531)
 
 
 def _wrist_cam(side: str) -> BodyAttachedTiledCameraCfg:
@@ -197,7 +197,7 @@ class BimanualYamCfg:
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(RIG_X_M, 0.0, 0.0),
-            rot=(1.0, 0.0, 0.0, 0.0),
+            rot=(0.0, 0.0, 0.0, 1.0),
             joint_pos={
                 **{f"{side}_{j}": v for side in ARMS for j, v in _HOME_ARM.items()},
                 **{j: _HOME_FINGER_M for side in ARMS for j in FINGER_JOINT_NAMES[side]},
@@ -282,12 +282,7 @@ def _gripper_open(env, side, asset_name="robot"):
 
 
 def _ee_pose(env, side, asset_name="robot"):
-    robot = env.scene[asset_name]
-    body_idx = robot.data.body_names.index(EE_BODY_NAME[side])
-    return subtract_frame_transforms(
-        _to_torch(robot.data.root_pos_w), _to_torch(robot.data.root_quat_w),
-        _to_torch(robot.data.body_pos_w)[:, body_idx, :], _to_torch(robot.data.body_quat_w)[:, body_idx, :],
-    )
+    return body_pose_in_robot_root(env.scene[asset_name], EE_BODY_NAME[side])
 
 
 def left_arm_joint_pos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):

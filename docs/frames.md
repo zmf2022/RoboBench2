@@ -15,9 +15,11 @@ frame. This document is the contract that removes that assumption.
 unaffected by the replication offset). Camera extrinsics use ROS camera axes,
 but follow the same recorded `(w, x, y, z)` component ordering.
 
-Isaac Lab 3 uses `(x, y, z, w)` internally. RoboLab converts at simulator,
-math, action, and recording boundaries so this public contract and recordings
-remain unchanged across Isaac Sim 5 and 6.
+Isaac Lab 3 configurations and simulator math use native `(x, y, z, w)`.
+Robot, camera, fixture and light configs follow this convention, including
+inherited defaults. Configurations are never reordered at environment startup.
+RoboLab converts only at public WXYZ action/state, USD import and recording
+boundaries; the policy interface and historical recordings remain WXYZ.
 
 ## Robot placement
 

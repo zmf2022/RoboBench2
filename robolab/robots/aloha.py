@@ -32,13 +32,12 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import TiledCameraCfg
-
-from robolab.core.sensors.body_attached_camera import BodyAttachedTiledCameraCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
 
 from robolab.constants import ROBOTS_DIR
-from robolab.robots.droid import _to_torch
+from robolab.core.observations.robot_state import body_pose_in_robot_root
+from robolab.core.sensors.body_attached_camera import BodyAttachedTiledCameraCfg
+from robolab.core.utils.isaaclab_compat import as_torch as _to_torch
 
 ARMS = ("left", "right")
 ARM_JOINT_NAMES = {
@@ -75,13 +74,13 @@ _D405 = dict(
 _CAM_HIGH = TiledCameraCfg(
     prim_path="{ENV_REGEX_NS}/robot/torso/cam_high",
     offset=TiledCameraCfg.OffsetCfg(
-        pos=(0.0, -0.284794, 1.01524), rot=(0.976332, 0.216277, 0.0, 0.0), convention="opengl"),
+        pos=(0.0, -0.284794, 1.01524), rot=(0.216277, 0.0, 0.0, 0.976332), convention="opengl"),
     **_D405,
 )
 _CAM_LOW = TiledCameraCfg(
     prim_path="{ENV_REGEX_NS}/robot/torso/cam_low",
     offset=TiledCameraCfg.OffsetCfg(
-        pos=(0.0, -0.358167, 0.0216055), rot=(0.672659, 0.739953, 0.0, 0.0), convention="opengl"),
+        pos=(0.0, -0.358167, 0.0216055), rot=(0.739953, 0.0, 0.0, 0.672659), convention="opengl"),
     **_D405,
 )
 
@@ -107,7 +106,7 @@ def _wrist_cam(side: str) -> TiledCameraCfg:
         body_name=f"{side}_gripper_link",
         offset=TiledCameraCfg.OffsetCfg(
             pos=(0.025339, -0.000066, 0.082467),
-            rot=(0.596065, 0.380403, -0.379928, -0.596368), convention="opengl"),
+            rot=(0.380403, -0.379928, -0.596368, 0.596065), convention="opengl"),
         **_D405,
     )
 
@@ -126,7 +125,7 @@ _CAM_RIGHT_WRIST = _wrist_cam("right")
 _CAM_GYM_TOP = TiledCameraCfg(
     prim_path="{ENV_REGEX_NS}/robot/torso/cam_high",
     offset=TiledCameraCfg.OffsetCfg(
-        pos=(0.0, 0.019, 0.79), rot=(1.0, 0.0, 0.0, 0.0), convention="opengl"),
+        pos=(0.0, 0.019, 0.79), rot=(0.0, 0.0, 0.0, 1.0), convention="opengl"),
     height=480, width=640, data_types=["rgb"],
     spawn=sim_utils.PinholeCameraCfg(
         focal_length=1.0, focus_distance=28.0,
@@ -160,7 +159,7 @@ _ALOHA_ROBOT = ArticulationCfg(
         init_state=ArticulationCfg.InitialStateCfg(
             # Rig yawed +90 deg: arms along the table's Y axis, workspace at (0.55, 0).
             pos=(0.55, 0.0, 0.0),
-            rot=(0.70710678, 0.0, 0.0, 0.70710678),
+            rot=(0.0, 0.0, 0.70710678, 0.70710678),
             joint_pos={
                 **{f"{side}_{joint}": value
                    for side in ARMS for joint, value in _NEUTRAL.items()},
@@ -298,14 +297,7 @@ def right_gripper_pos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneE
 
 
 def _ee_pose(env, side, asset_name="robot"):
-    robot = env.scene[asset_name]
-    body_idx = robot.data.body_names.index(EE_BODY_NAME[side])
-    return subtract_frame_transforms(
-        _to_torch(robot.data.root_pos_w),
-        _to_torch(robot.data.root_quat_w),
-        _to_torch(robot.data.body_pos_w)[:, body_idx, :],
-        _to_torch(robot.data.body_quat_w)[:, body_idx, :],
-    )
+    return body_pose_in_robot_root(env.scene[asset_name], EE_BODY_NAME[side])
 
 
 def left_ee_pos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):

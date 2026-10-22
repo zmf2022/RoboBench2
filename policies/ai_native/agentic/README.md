@@ -6,38 +6,28 @@ Model inputs include camera images, measured robot state, the task instruction, 
 
 The published original/reference runs predate this restriction and exposed native progress and success-criterion metadata. This release removes those inputs from both the original and ablation interfaces. The current evaluator also uses its updated reset/seeding protocol rather than the historical per-episode reset seeds. Published results have not been reevaluated with these changes.
 
-## Installation
+## Prerequisites
 
-Follow the repository [installation instructions](../../../README.md) on a Linux GPU machine with IsaacSim, IsaacLab and the RoboLab assets. Install the Codex version used by this implementation:
+Follow the repository [installation instructions](../../../README.md) on a Linux GPU machine with IsaacSim, IsaacLab and the RoboLab assets. The commands below assume Codex is already on `PATH` and signed in. The runner inherits your existing Codex configuration and login, including `CODEX_HOME` if set; no separate API key or login directory is required. This implementation was developed against Codex 0.149.1; compatibility with other versions has not been established here.
 
-```bash
-npm install -g @openai/codex@0.149.1
-codex --version
-```
-
-Configure your own OpenAI API key through your shell or credential manager. Keep this experiment's Codex configuration separate from your personal setup:
-
-```bash
-export ASTRA_CODEX_HOME="$PWD/output/astra-codex-home"
-mkdir -p "$ASTRA_CODEX_HOME"
-printenv OPENAI_API_KEY | CODEX_HOME="$ASTRA_CODEX_HOME" codex login --with-api-key
-```
-
-See the official [authentication instructions](https://developers.openai.com/codex/auth) and [configuration reference](https://developers.openai.com/codex/config-reference). The runner selects the `openai` provider and GPT-6 Astra; your account must have access to that model. A bundled client model catalog is not proof of account access. Provider-specific credentials, endpoints and model metadata are not included in this release.
+See the official [authentication instructions](https://developers.openai.com/codex/auth) and [configuration reference](https://developers.openai.com/codex/config-reference). The runner selects the `openai` provider; your account must have access to the selected model. GPT-6 Astra and GPT-6.1 Sol are supported with `low`, `medium`, `high`, `xhigh` and `max` reasoning suffixes. A bundled client model catalog is not proof of account access. Provider-specific credentials, endpoints and model metadata are not included in this release.
 
 ## Run one episode
 
 From the repository root, using the Python environment from installation:
 
 ```bash
-CODEX_HOME="$ASTRA_CODEX_HOME" python policies/ai_native/agentic/run.py \
+python policies/ai_native/agentic/run.py \
+  --model gpt-6.1-sol-medium \
   --headless --embodiment droid --task RubiksCubeTask \
   --seed 0 --num-envs 1 --num-runs 1 \
   --video-mode sensor --renderer realtime \
   --output-folder-name astra-example --allow-model-requests
 ```
 
-`--allow-model-requests` enables paid inference. Use a distinct output folder and Codex home for each parallel process. The command runs one task and seed; this release does not include a cloud scheduler.
+The example explicitly selects GPT-6.1 Sol with medium reasoning. Omitting `--model` uses the runner default, `gpt-6-astra-medium`, rather than the default model in your Codex configuration. Existing Codex authentication is still reused.
+
+`--allow-model-requests` enables real model requests using your current Codex credentials. Use a distinct output folder for each parallel process. The command runs one task and seed; this release does not include a cloud scheduler.
 
 ## Runtime configuration
 

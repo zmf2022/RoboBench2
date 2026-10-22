@@ -44,10 +44,14 @@ The sections below retain the interface audit and historical validation evidence
 RoboLab keeps its existing external contracts while adapting the simulator
 boundary:
 
-- Configs, observations, Cartesian actions, `WorldState`, and all HDF5
-  quaternion fields remain `(w, x, y, z)`. Isaac Lab 3's internal
-  `(x, y, z, w)` values are converted centrally. Camera extrinsics retain ROS
-  camera axes while using the same stable WXYZ component storage.
+- Simulation configs and math use Isaac Lab 3's native `(x, y, z, w)` order,
+  including inherited config defaults. There is no environment-wide rotation
+  rewrite at startup. Public observations, Cartesian actions, `WorldState`,
+  USD import metadata and HDF5 records retain `(w, x, y, z)` through explicit
+  boundary conversions. Camera records retain ROS axes and WXYZ storage.
+- Camera defaults come from configured local extrinsics and the current mount
+  pose, not a snapshot of an already modified camera. Randomization, absolute
+  placement and restore share the public camera pose setter and sensor reset.
 - Isaac Lab 3 `ProxyArray` state is exposed to RoboLab as zero-copy torch views.
 - State writers use Isaac Lab 3's indexed APIs, with fallbacks for Isaac Lab 2.
 - `sim.physics`/`isaaclab_physx.physics.PhysxCfg` and the new `FrameView` API are

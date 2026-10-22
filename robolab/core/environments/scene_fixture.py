@@ -28,9 +28,11 @@ from dataclasses import dataclass
 from typing import Literal
 
 import isaaclab.sim as sim_utils
+import torch
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.sim.utils import clone
 from isaaclab.utils import configclass
+from isaaclab.utils.math import combine_frame_transforms
 from pxr import Usd, UsdGeom
 
 from robolab.constants import ASSET_DIR
@@ -38,19 +40,20 @@ from robolab.constants import ASSET_DIR
 TABLE_FIXTURE_PRIM = "franka_table"
 
 
-@dataclass(frozen=True)
+# Keep this immutable descriptor outside configclass's mutable dataclass traversal.
+@dataclass(frozen=True, slots=True)
 class TableFixtureCfg:
     """Fixture USD a robot is mounted on, and its pose.
 
     The pose is expressed in the frame selected by ``frame``: ``"origin"`` for
     the env origin, ``"robot"`` for the robot root's init pose (the fixture
     then follows e.g. a ground-rebased root). Translation in meters, rotation
-    as a ``(w, x, y, z)`` quaternion.
+    as a native Isaac Lab ``(x, y, z, w)`` quaternion.
     """
 
     usd_path: str
     pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    rot: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
     frame: Literal["origin", "robot"] = "origin"
 
 
@@ -58,27 +61,8 @@ FRANKA_TABLE_FIXTURE = TableFixtureCfg(
     usd_path=os.path.join(ASSET_DIR, "fixtures", "franka_table.usd"),
     pos=(-0.087, 0.0, 0.0),
     # 180 degrees about +Z, matching the pose authored in every task scene.
-    rot=(6.123233995736766e-17, 0.0, 0.0, 1.0),
+    rot=(0.0, 0.0, 1.0, 6.123233995736766e-17),
 )
-
-
-def _quat_mul(
-    q1: tuple[float, float, float, float], q2: tuple[float, float, float, float]
-) -> tuple[float, float, float, float]:
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    return (
-        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-    )
-
-
-def _quat_rotate(q: tuple[float, float, float, float], v: tuple[float, float, float]) -> tuple[float, float, float]:
-    w, x, y, z = q
-    qv = _quat_mul(_quat_mul(q, (0.0, *v)), (w, -x, -y, -z))
-    return qv[1:]
 
 
 def table_fixture_asset(fixture: TableFixtureCfg | None, robot_cfg: type) -> AssetBaseCfg | None:
@@ -88,8 +72,13 @@ def table_fixture_asset(fixture: TableFixtureCfg | None, robot_cfg: type) -> Ass
     pos, rot = fixture.pos, fixture.rot
     if fixture.frame == "robot":
         robot_state = robot_cfg().robot.init_state
-        pos = tuple(p + d for p, d in zip(robot_state.pos, _quat_rotate(robot_state.rot, fixture.pos)))
-        rot = _quat_mul(robot_state.rot, fixture.rot)
+        pos_tensor, rot_tensor = combine_frame_transforms(
+            torch.tensor([robot_state.pos], dtype=torch.float64),
+            torch.tensor([robot_state.rot], dtype=torch.float64),
+            torch.tensor([fixture.pos], dtype=torch.float64),
+            torch.tensor([fixture.rot], dtype=torch.float64),
+        )
+        pos, rot = tuple(pos_tensor[0].tolist()), tuple(rot_tensor[0].tolist())
     return AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/table_fixture",
         spawn=sim_utils.UsdFileCfg(usd_path=fixture.usd_path),

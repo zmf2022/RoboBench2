@@ -7,14 +7,14 @@ removed it in a controlled replay. Register rows: P43 (the first runtime rule), 
 
 ## 1. What it is
 
-The Robotiq 2F-85 pad collider (`Defeatured_2F_85_PAD_OPEN_fingertipsstep_01` in
-`assets/robots/franka_robotiq_2f_85_flattened.usd`) is a convex decomposition of a mesh that is not
-watertight, with `shrinkWrap` off. At the fingertip it is a **6 mm slab** (42.5 to 48.5 mm off the
-jaw axis when open) with air behind it; the finger body begins 4.5 mm further out and only over the
-rear third of the pad. An object feature (a rim, a wall, a box edge, a stem, a tail) pressed more
-than about 3 mm into that slab is depenetrated out of its *back* face, the nearest exit, and is
-then hooked behind the pad. The pad itself blocks the way back. Opening the hand does not release
-it; the object slips off when the pad edge passes it.
+The Robotiq 2F-85 pad collider (`Defeatured_2F_85_PAD_OPEN_fingertipsstep_01` in the upstream
+thin-pad asset, `franka_robotiq_2f_85_flattened.usd`, which this tree ships unchanged) is a convex
+decomposition of a mesh that is not watertight, with `shrinkWrap` off. At the fingertip it is a
+**6 mm slab** (42.5 to 48.5 mm off the jaw axis when open) with air behind it; the finger body
+begins 4.5 mm further out and only over the rear third of the pad. An object feature (a rim, a
+wall, a box edge, a stem, a tail) pressed more than about 3 mm into that slab is depenetrated out
+of its *back* face, the nearest exit, and is then hooked behind the pad. The pad itself blocks the
+way back. Opening the hand does not release it; the object slips off when the pad edge passes it.
 
 This needs a finger that cannot yield, and the recorded data say so: in every reviewed tow the
 `finger_joint` sits at a hard limit, 0.000 (open, ~90 %) or 0.785 (closed on nothing). Mid-range,
@@ -41,22 +41,21 @@ apple 0 %, bottles 0 %, bananas 1 %. Thin features tunnel, fat convex bodies do 
 
 **Replay test.** `examples/run_recorded.py --env-config current --num_envs 4` replays the recorded
 initial state and actions of gr00t `GrabAFruitTask` env 1 (the reviewer's "the gripper is towing a
-banana"). With the shipped asset the banana hooks in 4 of 4 envs at the recording's time (right pad
-depth 8 to 9.6 mm from t = 13 s to the end, banana carried at 8 to 10 cm). With
-`ROBOLAB_ROBOT_USD=assets/robots/franka_robotiq_2f_85_solidpad.usd`, the same asset with the pad
-collider replaced by its bounding box and the finger body by its convex hull, the hook does not form
-in any env: the contact reaches 1.6 to 2.4 mm at t = 12 to 13 s, separates by t = 14 to 19 s, and
-the banana stays on the table. One episode, open-loop; the solid pad is not the default until a
-normal run set confirms grasping is unchanged (the contact face is the same, the box is 19 mm deep
-instead of 6).
+banana"). With the shipped rig (the upstream 6 mm thin pads) the banana hooks in 4 of 4 envs at the
+recording's time (right pad depth 8 to 9.6 mm from t = 13 s to the end, banana carried at 8 to
+10 cm). With a variant whose pad collider is replaced by its bounding box and finger body by its
+convex hull, the hook does not form in any env: the contact reaches 1.6 to 2.4 mm at t = 12 to 13 s,
+separates by t = 14 to 19 s, and the banana stays on the table. One episode, open-loop; that solid
+pad was never adopted here (the contact face is the same, the box is 19 mm deep instead of 6).
 
-**Isaac Sim 6.** On the `isaac60` stack the default rig is `franka_robotiq_2f_85_isaac60.usd`, a
-derivative of the flattened file that de-instances the Robotiq visual prototypes; its pad colliders
-and joint frames are identical to the 5.x rig, so the artifact is the same there.
-`franka_robotiq_2f_85_isaac60_solidpad.usd` is the solid-pad variant of that rig. The replay above,
-run on the 6.0 stack, reproduces the hook 4 of 4 on the default rig and 0 of 4 on the solid pad
-(register row P125 in [changes.md](changes.md)); the 5.x and 6.0 stacks resolve contacts differently
-in general (`docs/isaac_sim_6.md`), so a published number states its stack.
+**Isaac Sim 6.** The shipped rig is the same upstream file, so the artifact is the same there.
+The replay above reproduces the hook 4 of 4 on the shipped rig and 0 of 4 on the solid-pad
+variant (P125 in [changes.md](changes.md)); 5.x and 6.0 resolve contacts differently
+(`docs/isaac_sim_6.md`), so a published number states its stack.
+
+**Asset consolidation.** Only the upstream `franka_robotiq_2f_85_flattened.usd` ships now,
+byte-for-byte unchanged; the separate de-instanced and solid-pad files were removed. An A/B of
+the two pads needs an external copy through `ROBOLAB_ROBOT_USD`.
 
 ## 2. How common it was
 
@@ -127,5 +126,5 @@ python scripts/flag_tows.py output/cli_* --summary --csv tows.csv        # table
 Report it, do not score it as policy behaviour. The object never left the hand by the policy's
 doing, so grasp, carry, release and drop counts after the onset are physics, and the task outcome
 is usually a timeout with the object welded to a finger. For a leaderboard either exclude tier-A
-episodes and publish the exclusion rate per policy (it differs, 4 to 10 %), or rerun with the
-solid-pad asset once it is validated.
+episodes and publish the exclusion rate per policy (it differs, 4 to 10 %), or rerun with an
+external solid-pad asset through `ROBOLAB_ROBOT_USD`.

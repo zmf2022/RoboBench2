@@ -7,6 +7,42 @@ from isaaclab.utils import configclass
 
 
 @configclass
+class GymMatchLightCfg:
+    """Three directional lights for the ALOHA reference-view variant.
+
+    Directions follow gym-aloha's ``gym_aloha/assets/scene.xml``. Native XYZW
+    rotations map each USD light's -Z axis to its reference direction. Isaac
+    intensity uses this project's 3000 setting; MuJoCo's diffuse values
+    do not establish photometric equivalence between renderers.
+    """
+
+    front_left_light = AssetBaseCfg(
+        prim_path="/World/gym_front_left_light",
+        spawn=sim_utils.DistantLightCfg(intensity=3000.0),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(-1.0, -1.0, 1.0),
+            rot=(0.3250575837, -0.3250575837, 0.0, 0.8880738340),
+        ),
+    )
+    front_right_light = AssetBaseCfg(
+        prim_path="/World/gym_front_right_light",
+        spawn=sim_utils.DistantLightCfg(intensity=3000.0),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(1.0, -1.0, 1.0),
+            rot=(0.3250575837, 0.3250575837, 0.0, 0.8880738340),
+        ),
+    )
+    back_light = AssetBaseCfg(
+        prim_path="/World/gym_back_light",
+        spawn=sim_utils.DistantLightCfg(intensity=3000.0),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(0.0, 1.0, 1.0),
+            rot=(-0.3826834324, 0.0, 0.0, 0.9238795325),
+        ),
+    )
+
+
+@configclass
 class SphereLightCfg:
     """Cfg class that adds lighting to scene configurations."""
     sphere_light = AssetBaseCfg(
@@ -57,7 +93,7 @@ class FrontDirectionalLightCfg:
     front_directional_light = AssetBaseCfg(
         prim_path="/World/front_directional_light",
         spawn=sim_utils.DistantLightCfg(intensity=3000, angle=0.53, exposure=3),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.7071, 0.0, 0.7071, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.0, 0.7071, 0.0, 0.7071)),
     )
 
 @configclass
@@ -66,7 +102,7 @@ class BehindDirectionalLightCfg:
     behind_directional_light = AssetBaseCfg(
         prim_path="/World/behind_directional_light",
         spawn=sim_utils.DistantLightCfg(intensity=3000, angle=0.53, exposure=3),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.7071, 0.0, -0.7071, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.0, -0.7071, 0.0, 0.7071)),
     )
 
 @configclass
@@ -75,7 +111,7 @@ class TopDownDirectionalLightCfg:
     top_down_directional_light = AssetBaseCfg(
         prim_path="/World/top_down_directional_light",
         spawn=sim_utils.DistantLightCfg(intensity=3000, angle=0.53, exposure=0.0),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.0, 0.0, 0.0, 1.0)),
     )
 
 @configclass
@@ -84,7 +120,7 @@ class LeftDirectionalLightCfg:
     left_directional_light = AssetBaseCfg(
         prim_path="/World/left_directional_light",
         spawn=sim_utils.DistantLightCfg(intensity=3000, angle=0.53, exposure=3),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.7071, -0.7071, 0.0, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(-0.7071, 0.0, 0.0, 0.7071)),
     )
 
 @configclass
@@ -93,5 +129,5 @@ class RightDirectionalLightCfg:
     right_directional_light = AssetBaseCfg(
         prim_path="/World/right_directional_light",
         spawn=sim_utils.DistantLightCfg(intensity=3000, angle=0.53, exposure=3),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.7071, 0.7071, 0.0, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 5.0), rot=(0.7071, 0.0, 0.0, 0.7071)),
     )

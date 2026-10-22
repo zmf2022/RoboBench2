@@ -36,7 +36,7 @@ import numpy as np
 import robolab.constants
 from robolab.constants import ASSET_DIR
 
-# --- Robotiq 2F-85 kinematics, read from assets/robots/franka_robotiq_2f_85_flattened.usd -------
+# --- Robotiq 2F-85 kinematics, read from the shipped DROID rig (joint frames unchanged) --------
 # Each joint: frame in body0 (p0, q0 wxyz) and in body1 (p1, q1); a revolute joint rotates about the
 # joint frame's Z. child_pose = parent_pose * T(p0,q0) * Rz(theta) * T(p1,q1)^-1. The fixed joints
 # (outer knuckle -> outer finger) are identities. Validated against recorded finger poses: 0.00 mm.

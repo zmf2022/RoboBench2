@@ -13,15 +13,16 @@ Each robot file defines:
 - **Proprioception observations** — Joint positions, gripper state, EE pose
 - **Contact gripper** — Prim paths for contact detection on gripper fingers
 
-### DROID asset on Isaac Sim 6
+### DROID asset
 
-The DROID configuration uses `assets/robots/franka_robotiq_2f_85_isaac60.usd`.
-It is a compatibility derivative of the original flattened Franka + Robotiq
-asset: exactly eight Robotiq visual prototype roots are de-instanced because
-Isaac Sim 6 can otherwise omit them from RTX renders. The articulation, rigid
-bodies, joints, collision prims, meshes, link paths, and the original asset are
-unchanged. `tests/test_droid_isaac60_asset.py` locks those structural invariants
-when USD Python bindings are available.
+The DROID configuration uses the upstream
+`assets/robots/franka_robotiq_2f_85_flattened.usd` unchanged
+(sha256 `f5556954…f41`). Its 6 mm thin pads keep the towing artifact described in
+[verified/towing.md](verified/towing.md); its eight Robotiq visual prototypes stay
+instanceable, which Isaac Sim 6 can render as detached fragments in some scenes.
+The actuator config leaves the finger drive to the USD (`stiffness=None,
+damping=None`); a stiff PD closes the jaw through the object.
+`tests/test_droid_asset.py` locks the structure.
 
 Coordinate frames for observations, actions, and recorded data are a contract,
 not a convention — see [frames.md](frames.md). In short: EE observations and

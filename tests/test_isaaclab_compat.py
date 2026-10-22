@@ -3,6 +3,7 @@
 
 from copy import deepcopy
 
+import pytest
 import torch
 
 import robolab.core.utils.isaaclab_compat as compat
@@ -42,35 +43,33 @@ def test_scene_state_round_trip(monkeypatch):
     torch.testing.assert_close(restored["rigid_object"]["cube"]["root_pose"], state["rigid_object"]["cube"]["root_pose"])
 
 
-def test_config_rotations_are_prepared_once_and_recorded_as_wxyz(monkeypatch):
+def test_native_config_is_only_converted_for_recording(monkeypatch):
     monkeypatch.setattr(compat, "ISAACLAB_USES_XYZW", True)
 
     class Config:
         def __init__(self):
-            self.rot = (1.0, 0.0, 0.0, 0.0)
-            self.child = {"rot": [0.5, 0.1, 0.2, 0.3]}
+            self.rot = (0.0, 0.0, 0.0, 1.0)
+            self.child = {"rot": [0.1, 0.2, 0.3, 0.5]}
 
         def to_dict(self):
             return deepcopy(vars(self))
 
     cfg = Config()
-    compat.prepare_env_cfg(cfg)
-    assert cfg.rot == (0.0, 0.0, 0.0, 1.0)
-    assert cfg.child["rot"] == [0.1, 0.2, 0.3, 0.5]
-    compat.prepare_env_cfg(cfg)
-    assert cfg.rot == (0.0, 0.0, 0.0, 1.0)
-    recorded = compat.env_cfg_to_recording_dict(cfg)
-    assert recorded["rot"] == (1.0, 0.0, 0.0, 0.0)
-    assert recorded["child"]["rot"] == [0.5, 0.1, 0.2, 0.3]
+    before = cfg.to_dict()
+    for _ in range(2):
+        recorded = compat.env_cfg_to_recording_dict(cfg)
+        assert recorded["rot"] == (1.0, 0.0, 0.0, 0.0)
+        assert recorded["child"]["rot"] == [0.5, 0.1, 0.2, 0.3]
+        assert cfg.to_dict() == before
 
 
-def test_droid_relative_ik_authors_identity_at_wxyz_boundary(monkeypatch):
-    """The relative-IK offset must not inherit Isaac Lab 3's XYZW default."""
-    from robolab.robots.droid import DroidRelIKActionCfg
+@pytest.mark.parametrize("config_name", ["DroidIKActionCfg", "DroidRelIKActionCfg"])
+def test_droid_ik_uses_native_identity(monkeypatch, config_name):
+    from robolab.robots import droid
 
-    cfg = DroidRelIKActionCfg()
-    assert cfg.arm_action.body_offset.rot == (1.0, 0.0, 0.0, 0.0)
-
+    cfg = getattr(droid, config_name)()
+    assert cfg.arm_action.body_offset.rot == (0.0, 0.0, 0.0, 1.0)
     monkeypatch.setattr(compat, "ISAACLAB_USES_XYZW", True)
-    compat.prepare_env_cfg(cfg)
+    recorded = compat.env_cfg_to_recording_dict(cfg)
+    assert recorded["arm_action"]["body_offset"]["rot"] == (1.0, 0.0, 0.0, 0.0)
     assert cfg.arm_action.body_offset.rot == (0.0, 0.0, 0.0, 1.0)

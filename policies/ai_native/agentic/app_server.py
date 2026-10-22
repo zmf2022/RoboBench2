@@ -32,6 +32,7 @@ MODEL_PROVIDER = "openai"
 ASTRA_MODEL = "gpt-6-astra"
 ASTRA_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 ASTRA_MODEL_IDS = tuple(f"{ASTRA_MODEL}-{effort}" for effort in ASTRA_EFFORTS)
+AGENTIC_MODEL_IDS = ASTRA_MODEL_IDS + tuple(f"gpt-6.1-sol-{effort}" for effort in ASTRA_EFFORTS)
 MAX_LINE_BYTES = 128 * 1024 * 1024
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 MAX_RECALL_IMAGES = 12
@@ -613,8 +614,8 @@ class PersistentAppServerSession:
     ) -> None:
         if allow_model_requests is not True:
             raise ValueError("Real model transport requires explicit allow_model_requests=True")
-        if model_id not in ASTRA_MODEL_IDS:
-            raise ValueError("Use an exact supported Astra model ID")
+        if model_id not in AGENTIC_MODEL_IDS:
+            raise ValueError("Use an exact supported Agentic model ID")
         if not math.isfinite(timeout) or not 0 < timeout <= 900:
             raise ValueError("timeout must be in (0, 900]")
         if not isinstance(instructions, str) or not instructions.strip():
@@ -1074,6 +1075,7 @@ class PersistentAppServerSession:
 
 
 __all__ = [
+    "AGENTIC_MODEL_IDS",
     "ASTRA_MODEL_IDS",
     "AppServerError",
     "EpisodeMemory",

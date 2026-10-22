@@ -76,27 +76,28 @@ export AI_NATIVE_MODEL="gpt-6-astra"
 python policies/ai_native/direct_api/list_models.py
 python policies/ai_native/direct_api/run.py \
   --headless --task BananaInBowlTask --num-envs 1 --num-runs 1
+
+# GUI可视化
+python policies/ai_native/direct_api/run.py \
+  --visualizer kit --task RubiksCubeTask --num-envs 1 --num-runs 1
 ```
 
 使用其他服务商时，替换 `OPENAI_BASE_URL` 和 `AI_NATIVE_MODEL`。动作类型、历史观测和推理参数见 [Direct-API 参数说明](policies/ai_native/direct_api/README.md)。
 
-**Agentic**：需要 Node.js／npm，以及具有 GPT-6 Astra 访问权限的 OpenAI API 密钥。安装实现所用的 Codex 版本，并为实验配置独立登录目录：
+**Agentic**：默认 Codex 已安装并已登录，且当前账号可访问示例使用的 GPT-6.1 Sol。直接复用现有 Codex 配置和登录状态：
 
 ```bash
-npm install -g @openai/codex@0.149.1
-export OPENAI_API_KEY="你的密钥"
-export ASTRA_CODEX_HOME="$PWD/output/astra-codex-home"
-mkdir -p "$ASTRA_CODEX_HOME"
-printenv OPENAI_API_KEY | CODEX_HOME="$ASTRA_CODEX_HOME" codex login --with-api-key
-
-CODEX_HOME="$ASTRA_CODEX_HOME" python policies/ai_native/agentic/run.py \
+python policies/ai_native/agentic/run.py \
+  --model gpt-6.1-sol-medium \
   --headless --embodiment droid --task RubiksCubeTask \
   --seed 0 --num-envs 1 --num-runs 1 \
   --video-mode sensor --renderer realtime \
-  --output-folder-name astra-example --allow-model-requests
+  --output-folder-name gpt6-example --allow-model-requests
 ```
 
-每个并行进程使用独立的输出目录和 Codex 登录目录。工具、历史记录及视频示范配置见 [Agentic 参数说明](policies/ai_native/agentic/README.md)。Orchestrated 策略尚未提供。
+示例通过 `--model gpt-6.1-sol-medium` 选择 Sol 的中等思考强度；省略 `--model` 时，runner 默认使用 `gpt-6-astra-medium`，不会沿用 Codex 配置中的默认模型。现有 Codex 登录状态仍会复用。
+
+每个并行进程使用独立的输出目录；无需重新登录或另设 Codex 登录目录。工具、历史记录及视频示范配置见 [Agentic 参数说明](policies/ai_native/agentic/README.md)。Orchestrated 策略尚未提供。
 
 <a id="docker"></a>
 
@@ -115,10 +116,10 @@ CODEX_HOME="$ASTRA_CODEX_HOME" python policies/ai_native/agentic/run.py \
 
 ### 版本兼容
 
-| Isaac Sim | Isaac Lab | 当前状态 |
-| --- | --- | --- |
-| 6.0.1 | 3.0 beta 2 patch 1 | 当前安装配置，使用 `--extra isaac60` |
-| 6.2.0 | 3.0 正式版 | 尚未适配，不提供 `isaac62` 安装选项 |
+| Isaac Sim | Isaac Lab          | 当前状态                               |
+| --------- | ------------------ | -------------------------------------- |
+| 6.0.1     | 3.0 beta 2 patch 1 | 当前安装配置，使用 `--extra isaac60` |
+| 6.2.0     | 3.0 正式版         | 尚未适配，不提供 `isaac62` 安装选项  |
 
 6.2 的正式版移除了当前代码使用的 `sim.render` 配置，官方依赖采用 PyTorch 2.11／CUDA 13.0，不能只修改版本号升级。详见[接口审查和历史验证记录](docs/isaac_sim_6.md)。
 

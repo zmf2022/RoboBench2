@@ -19,7 +19,8 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransf
 from isaaclab.utils import configclass
 
 from robolab.constants import ROBOTS_DIR
-from robolab.core.utils.isaaclab_compat import as_torch, quat_isaaclab_to_wxyz
+from robolab.core.observations.robot_state import pose_in_robot_root
+from robolab.core.utils.isaaclab_compat import as_torch
 from robolab.robots.droid import BinaryJointPositionZeroToOneActionCfg
 
 ARM_JOINT_NAMES = [f"joint_{index}" for index in range(1, 8)]
@@ -50,7 +51,7 @@ _WRIST_CAM = TiledCameraCfg(
     offset=TiledCameraCfg.OffsetCfg(
         # Kortex's simulation-camera pose expressed in the bracelet frame.
         pos=(0.0, -0.05639, -0.074575),
-        rot=(0.5, 0.5, 0.5, -0.5),
+        rot=(0.5, 0.5, -0.5, 0.5),
         convention="world",
     ),
 )
@@ -82,7 +83,7 @@ class KinovaGen3Cfg:
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(0.0, 0.0, 0.0),
-            rot=(1.0, 0.0, 0.0, 0.0),
+            rot=(0.0, 0.0, 0.0, 1.0),
             joint_pos={
                 "joint_1": 0.0,
                 "joint_2": 0.26,
@@ -151,22 +152,26 @@ def gripper_pos(
     return as_torch(robot.data.joint_pos)[:, index : index + 1] / 0.8
 
 
+def _eef_pose(env, asset_cfg):
+    frames = env.scene[asset_cfg.name]
+    index = frames.data.target_frame_names.index("eef_frame")
+    return pose_in_robot_root(
+        env.scene["robot"],
+        as_torch(frames.data.target_pos_w)[:, index, :],
+        as_torch(frames.data.target_quat_w)[:, index, :],
+    )
+
+
 def eef_pos(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("frames")
 ):
-    frames = env.scene[asset_cfg.name]
-    index = frames.data.target_frame_names.index("eef_frame")
-    return (
-        as_torch(frames.data.target_pos_w)[:, index, :] - env.scene.env_origins[:, :3]
-    )
+    return _eef_pose(env, asset_cfg)[0]
 
 
 def eef_quat(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("frames")
 ):
-    frames = env.scene[asset_cfg.name]
-    index = frames.data.target_frame_names.index("eef_frame")
-    return quat_isaaclab_to_wxyz(as_torch(frames.data.target_quat_w)[:, index, :])
+    return _eef_pose(env, asset_cfg)[1]
 
 
 @configclass

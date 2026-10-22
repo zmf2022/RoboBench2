@@ -39,15 +39,16 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import TiledCameraCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransformerCfg, OffsetCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import subtract_frame_transforms
 
 from robolab.constants import ASSET_DIR, ROBOTS_DIR
 from robolab.core.environments.scene_fixture import TableFixtureCfg
+from robolab.core.observations.robot_state import body_pose_in_robot_root
+from robolab.core.utils.isaaclab_compat import as_torch as _to_torch
+from robolab.core.utils.isaaclab_compat import quat_wxyz_to_isaaclab
 from robolab.robots.droid import (
     EEF_OFFSET_POS,
     EEF_OFFSET_ROT,
     BinaryJointPositionZeroToOneActionCfg,
-    _to_torch,
 )
 
 ARMS = ("left_arm", "right_arm")
@@ -97,7 +98,7 @@ def _wrist_cam(arm: str) -> TiledCameraCfg:
             vertical_aperture=3.024,
         ),
         offset=TiledCameraCfg.OffsetCfg(
-            pos=(0.011, -0.031, -0.074), rot=(-0.420, 0.570, 0.576, -0.409), convention="opengl"
+            pos=(0.011, -0.031, -0.074), rot=(0.570, 0.576, -0.409, -0.420), convention="opengl"
         ),
     )
 
@@ -131,7 +132,7 @@ class BimanualFrankaCfg:
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(0.0, 0.0, 0.0),
-            rot=(1.0, 0.0, 0.0, 0.0),
+            rot=(0.0, 0.0, 0.0, 1.0),
             joint_pos={
                 **{f"{arm}_{joint}": value
                    for arm in ARMS for joint, value in _HOME_JOINT_POS.items()},
@@ -173,7 +174,7 @@ class BimanualFrankaCfg:
             FrameTransformerCfg.FrameCfg(
                 prim_path=f"{_GRIPPER_PRIM.format(arm=arm)}/{arm}_base_link",
                 name=f"{arm}_eef_frame",
-                offset=OffsetCfg(pos=EEF_OFFSET_POS, rot=EEF_OFFSET_ROT),
+                offset=OffsetCfg(pos=EEF_OFFSET_POS, rot=quat_wxyz_to_isaaclab(EEF_OFFSET_ROT)),
             )
             for arm in ARMS
         ],
@@ -184,7 +185,7 @@ class BimanualFrankaCfg:
 BimanualFrankaCfg.table_fixture = TableFixtureCfg(
     usd_path=os.path.join(ASSET_DIR, "fixtures", "bimanual_franka_table.usda"),
     pos=(-0.087, 0.0, 0.0),
-    rot=(6.123233995736766e-17, 0.0, 0.0, 1.0),
+    rot=(0.0, 0.0, 1.0, 6.123233995736766e-17),
 )
 # One HDF5 channel per arm (docs/robots.md#end-effector-pose-recording).
 BimanualFrankaCfg.ee_recorder_bodies = {
@@ -241,14 +242,7 @@ def _gripper_pos(env: ManagerBasedRLEnv, arm: str, asset_name: str = "robot"):
 
 def _ee_pose(env: ManagerBasedRLEnv, arm: str, asset_name: str = "robot"):
     """Gripper base pose in the robot-root frame (docs/frames.md)."""
-    robot = env.scene[asset_name]
-    body_idx = robot.data.body_names.index(EE_BODY_NAME[arm])
-    return subtract_frame_transforms(
-        _to_torch(robot.data.root_pos_w),
-        _to_torch(robot.data.root_quat_w),
-        _to_torch(robot.data.body_pos_w)[:, body_idx, :],
-        _to_torch(robot.data.body_quat_w)[:, body_idx, :],
-    )
+    return body_pose_in_robot_root(env.scene[asset_name], EE_BODY_NAME[arm])
 
 
 def left_arm_joint_pos(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):

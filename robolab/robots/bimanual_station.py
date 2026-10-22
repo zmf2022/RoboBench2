@@ -29,27 +29,27 @@ from isaaclab.utils import configclass
 from robolab.constants import ASSET_DIR, ROBOTS_DIR
 from robolab.core.environments.scene_fixture import TableFixtureCfg
 from robolab.robots.aloha import (  # noqa: F401  (re-exported for clients)
-    ARM_JOINT_NAMES,
-    ARMS,
-    FINGER_JOINT_NAMES,
-    FINGER_TRAVEL_M,
-    AlohaJointPositionActionCfg,
-    AlohaProprioceptionObservationCfg,
     _CAM_LEFT_WRIST,
     _CAM_RIGHT_WRIST,
     _D405,
     _NEUTRAL,
+    ARM_JOINT_NAMES,
+    ARMS,
+    EE_BODY_NAME,
+    FINGER_JOINT_NAMES,
+    FINGER_TRAVEL_M,
+    AlohaJointPositionActionCfg,
+    AlohaProprioceptionObservationCfg,
     contact_gripper,
 )
 from robolab.robots.aloha import AlohaCfg as _AlohaCfg
-from robolab.robots.aloha import EE_BODY_NAME
 
 # Overhead camera on the station frame: centred above the near edge, looking
 # forward-down over the workspace (rig frame; the rig is placed by init_state).
 _CAM_HIGH_STATION = TiledCameraCfg(
     prim_path="{ENV_REGEX_NS}/robot/torso/cam_high",
     offset=TiledCameraCfg.OffsetCfg(
-        pos=(0.0, -0.42, 0.95), rot=(0.939693, 0.342020, 0.0, 0.0), convention="opengl"),
+        pos=(0.0, -0.42, 0.95), rot=(0.342020, 0.0, 0.0, 0.939693), convention="opengl"),
     **_D405,
 )
 
@@ -68,7 +68,7 @@ def _station_robot(usd_name: str) -> ArticulationCfg:
         # Rig yawed -90 deg: bases land on the table's near edge at
         # (0.13, -/+spacing/2), facing +x toward the workspace centre at (0.55, 0).
         pos=(0.55, 0.0, 0.0),
-        rot=(0.70710678, 0.0, 0.0, -0.70710678),
+        rot=(0.0, 0.0, -0.70710678, 0.70710678),
         joint_pos=dict(_BASE.robot.init_state.joint_pos),
     )
     return robot
@@ -98,8 +98,7 @@ _MOBILE_CAM_HIGH = TiledCameraCfg(
     prim_path="{ENV_REGEX_NS}/robot/torso/cam_high",
     offset=TiledCameraCfg.OffsetCfg(
         pos=(0.0, -0.57, 0.55),
-        rot=(math.cos(math.radians((90 - _MOBILE_CAM_PITCH_DEG) / 2)),
-             math.sin(math.radians((90 - _MOBILE_CAM_PITCH_DEG) / 2)), 0.0, 0.0),
+        rot=(math.sin(math.radians((90 - _MOBILE_CAM_PITCH_DEG) / 2)), 0.0, 0.0, math.cos(math.radians((90 - _MOBILE_CAM_PITCH_DEG) / 2))),
         convention="opengl"),
     height=480, width=640, data_types=["rgb"],
     spawn=sim_utils.PinholeCameraCfg(

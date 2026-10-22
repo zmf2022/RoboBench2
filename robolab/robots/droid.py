@@ -29,12 +29,13 @@ from robolab.core.actions.isaaclab_compat import (
     RobolabDifferentialInverseKinematicsActionCfg as DifferentialInverseKinematicsActionCfg,
 )
 from robolab.core.environments.scene_fixture import FRANKA_TABLE_FIXTURE
-from robolab.core.utils.isaaclab_compat import as_torch, quat_isaaclab_to_wxyz
+from robolab.core.utils.isaaclab_compat import as_torch, quat_isaaclab_to_wxyz, quat_wxyz_to_isaaclab
 
 # Offset of the end-effector control frame relative to base_link. Used by:
 #   - DroidCfg.frames "eef_frame" (FrameTransformer publishes this pose for downstream code)
 #   - examples/run_abs_ik_demo.py (converts eef_frame targets → base_link IK actions)
 # Kept here so all code agrees on what eef_frame is.
+# Public WXYZ constant retained for policy/example consumers; config use is converted explicitly.
 EEF_OFFSET_POS: tuple[float, float, float] = (0.0, 0.0, 0.0)
 EEF_OFFSET_ROT: tuple[float, float, float, float] = (0.5, -0.5, 0.5, -0.5)
 
@@ -57,7 +58,7 @@ _WRIST_CAM = TiledCameraCfg(
         vertical_aperture=3.024,
     ),
     offset=TiledCameraCfg.OffsetCfg(
-        pos=(0.011, -0.031, -0.074), rot=(-0.420, 0.570, 0.576, -0.409), convention="opengl"
+        pos=(0.011, -0.031, -0.074), rot=(0.570, 0.576, -0.409, -0.420), convention="opengl"
     ),
 )
 
@@ -69,14 +70,10 @@ class DroidCfg:
     robot = ArticulationCfg(
         prim_path="{ENV_REGEX_NS}/robot",
         spawn=sim_utils.UsdFileCfg(
-            # Isaac Sim 6 does not reliably render the Robotiq meshes when their
-            # internal prototype roots remain instanceable.  This derivative keeps
-            # the articulation/collision structure intact and de-instances only the
-            # eight Robotiq visual prototype roots.
-            # ROBOLAB_ROBOT_USD swaps the rig asset (docs/verified/towing.md: the solid-pad variant
-            # franka_robotiq_2f_85_solidpad.usd is the tested fix for the towing artifact on the 5.x
-            # rig, franka_robotiq_2f_85_isaac60_solidpad.usd the same fix for this rig; default unchanged).
-            usd_path=os.environ.get("ROBOLAB_ROBOT_USD") or os.path.join(ROBOTS_DIR, "franka_robotiq_2f_85_isaac60.usd"),
+            # The upstream RoboLab DROID asset, byte-for-byte unchanged.
+            # ROBOLAB_ROBOT_USD overrides the path.
+            # See docs/verified/towing.md (P124/P125).
+            usd_path=os.environ.get("ROBOLAB_ROBOT_USD") or os.path.join(ROBOTS_DIR, "franka_robotiq_2f_85_flattened.usd"),
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -90,7 +87,7 @@ class DroidCfg:
         ),
         init_state=ArticulationCfg.InitialStateCfg(
             pos=(0, 0, 0),
-            rot=(1, 0, 0, 0),
+            rot=(0, 0, 0, 1),
             joint_pos={
                 "panda_joint1": 0.0,
                 "panda_joint2": -1 / 5 * np.pi,
@@ -126,10 +123,11 @@ class DroidCfg:
                 damping=80.0,
             ),
             "gripper": ImplicitActuatorCfg(
+                # None keeps the drive authored in the USD (stiffness 100, damping 0.0002,
+                # maxForce 16.5); overriding it makes the jaw close through the object.
                 joint_names_expr=["finger_joint"],
-                stiffness=1000.0,
-                damping=40.0,
-                effort_limit=150.0,
+                stiffness=None,
+                damping=None,
                 velocity_limit=5.0, #2.175,
             ),
         },
@@ -158,7 +156,7 @@ class DroidCfg:
             FrameTransformerCfg.FrameCfg(
                 prim_path="{ENV_REGEX_NS}/robot/Gripper/Robotiq_2F_85/base_link",
                 name="eef_frame",
-                offset=OffsetCfg(pos=EEF_OFFSET_POS, rot=EEF_OFFSET_ROT),
+                offset=OffsetCfg(pos=EEF_OFFSET_POS, rot=quat_wxyz_to_isaaclab(EEF_OFFSET_ROT)),
             ),
         ],
     )
@@ -511,15 +509,7 @@ class DroidRelIKActionCfg:
         body_name="base_link",  # Robotiq 2F-85 base flange (gripper mount); matches ee_pos/ee_quat helpers
         controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=True, ik_method="dls"),
         scale=0.5,
-        body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
-            pos=[0.0, 0.0, 0.0],
-            # RoboLab-authored rotations are WXYZ. Spell out identity instead
-            # of inheriting Isaac Lab 3's XYZW default: prepare_env_cfg() must
-            # convert this to runtime XYZW [0, 0, 0, 1], not a 180-degree Z
-            # rotation [0, 0, 1, 0].
-            rot=(1.0, 0.0, 0.0, 0.0),
-            # rot=(0.5, -0.5, 0.5, -0.5),  # Match eef_frame: rotates base_link to the EE control frame.
-        ),
+        body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, 0.0]),
         # Robotiq 2F-85 max height base flange -> fingertip is 162.8mm (per Robotiq spec).
         # Uncomment to control the fingertip plane instead of the base flange.
         # body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, 0.1628]),

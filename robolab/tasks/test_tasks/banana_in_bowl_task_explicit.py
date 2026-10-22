@@ -2,16 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from isaaclab.utils import configclass
-from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
-import isaaclab.sim as sim_utils
-from isaaclab.managers import TerminationTermCfg as DoneTerm
-import isaaclab.envs.mdp as mdp
 from dataclasses import dataclass
 
-from robolab.core.task.task import Task
-from robolab.core.task.conditionals import object_in_container, pick_and_place
+import isaaclab.envs.mdp as mdp
+import isaaclab.sim as sim_utils
+from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.utils import configclass
+
 from robolab.constants import SCENE_DIR
+from robolab.core.task.conditionals import object_in_container, pick_and_place
+from robolab.core.task.task import Task
+
 
 @configclass
 class BananaBowlTableOakScene:
@@ -29,7 +31,7 @@ class BananaBowlTableOakScene:
         spawn=None,
         init_state=RigidObjectCfg.InitialStateCfg(
             pos=(0.35, 0.19, 0.08),
-            rot=(1.0, 0.0, 0.0, 0.0),
+            rot=(0.0, 0.0, 0.0, 1.0),
         )
     )
     bowl = RigidObjectCfg(
@@ -37,7 +39,7 @@ class BananaBowlTableOakScene:
         spawn=None,
         init_state=RigidObjectCfg.InitialStateCfg(
             pos=(0.33, -0.1, 0.11),
-            rot=(0.67, -0.74, 0.0, 0.0),
+            rot=(-0.74, 0.0, 0.0, 0.67),
         )
     )
 

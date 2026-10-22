@@ -70,6 +70,16 @@ def find_background_files(folder_path: str = BACKGROUND_ASSET_DIR, filename: str
 
 # Some hardcoded examples
 @configclass
+class DarkVoidBackgroundCfg:
+    """Untextured black background without ambient illumination."""
+
+    dome_light = AssetBaseCfg(
+        prim_path="/World/background",
+        spawn=sim_utils.DomeLightCfg(color=(0.0, 0.0, 0.0), intensity=0.0, visible_in_primary_ray=True),
+    )
+
+
+@configclass
 class EmptyWarehouseBackgroundCfg:
     dome_light = AssetBaseCfg(
     prim_path="/World/background",

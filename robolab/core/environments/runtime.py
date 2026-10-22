@@ -24,7 +24,7 @@ from robolab.core.environments.config import parse_env_cfg
 from robolab.core.environments.env import RobolabEnv
 from robolab.core.events.utils import merge_events_cfg
 from robolab.core.task.instruction import primary_instruction, select_instruction_fields
-from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict, prepare_env_cfg
+from robolab.core.utils.isaaclab_compat import env_cfg_to_recording_dict
 
 logger = logging.getLogger(__name__)
 
@@ -180,10 +180,6 @@ def create_env(scene: str | ManagerBasedEnvCfg,
                 if robolab.constants.VERBOSE:
                     print(f"Merged events into environment configuration: {env_cfg.events}")
 
-            # RoboLab authors and records WXYZ quaternions. Isaac Lab 3 uses
-            # XYZW internally, so translate config rotations at the boundary.
-            prepare_env_cfg(env_cfg)
-
             # Create new environment
             env = gym.make(scene, cfg=env_cfg).unwrapped
         except Exception:
@@ -217,7 +213,6 @@ def create_env(scene: str | ManagerBasedEnvCfg,
             if robolab.constants.VERBOSE:
                 print(f"Merged events into environment configuration: {env_cfg.events}")
 
-        prepare_env_cfg(env_cfg)
         env = RobolabEnv(env_cfg)
     else:
         raise ValueError(f"Unsupported scene type: {type(scene)}")

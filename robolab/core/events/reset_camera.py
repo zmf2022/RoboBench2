@@ -9,6 +9,7 @@ from isaaclab.sensors import Camera
 from isaaclab.utils import configclass
 
 import robolab.constants
+from robolab.core.sensors.camera_pose import default_camera_world_pose, set_camera_world_pose
 from robolab.core.sensors.camera_utils import is_camera
 from robolab.core.utils.isaaclab_compat import as_torch, quat_wxyz_to_isaaclab
 
@@ -108,10 +109,7 @@ def sample_camera_pose_uniform(
     num_envs = len(env_ids)
     device = camera.device
 
-    # Get current camera poses as the base
-    # Camera data provides pos_w and quat_w_ros (or quat_w depending on convention)
-    current_positions = as_torch(camera.data.pos_w)[env_ids].clone()
-    current_orientations = as_torch(camera.data.quat_w_ros)[env_ids].clone()
+    current_positions, current_orientations = default_camera_world_pose(env, camera, env_ids)
 
     # Create pose ranges tensor
     range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
@@ -143,7 +141,7 @@ def reset_camera_pose_uniform(
 ):
     """Reset camera pose to a random position and orientation uniformly within the given ranges.
 
-    This function randomizes the camera pose by applying a delta to the current camera pose.
+    This function applies a delta to the initial local camera pose at each reset.
     The delta is sampled uniformly from the specified ranges.
 
     The function takes a dictionary of pose ranges for each axis and rotation. The keys of the
@@ -184,7 +182,7 @@ def reset_camera_pose_uniform(
 
         # Set the camera poses
         # Note: set_world_poses expects positions (N, 3) and orientations (N, 4)
-        camera.set_world_poses(positions=positions, orientations=orientations, env_ids=env_ids)
+        set_camera_world_pose(camera, env_ids, positions, orientations)
 
         if robolab.constants.VERBOSE:
             print(f"Camera '{camera_name}' pose updated successfully")
@@ -218,10 +216,8 @@ def reset_camera_pose_to_default(
                 print(f"Warning: Sensor '{camera_name}' is not a Camera. Skipping.")
             continue
 
-        # Reset to the camera's default/initial pose
-        # The camera's cfg.offset contains the default offset from parent frame
-        # We need to reset using the camera's reset method or set to original values
-        camera.reset(env_ids)
+        positions, orientations = default_camera_world_pose(env, camera, env_ids)
+        set_camera_world_pose(camera, env_ids, positions, orientations)
 
         if robolab.constants.VERBOSE:
             print(f"Camera '{camera_name}' reset to default pose")
@@ -271,13 +267,14 @@ def reset_camera_pose_absolute(
             positions = current_positions
 
         if orientation is not None:
-            orientation = quat_wxyz_to_isaaclab(orientation)
-            orientations = torch.tensor([orientation], device=device).expand(num_envs, -1)
+            orientations = torch.tensor(
+                [quat_wxyz_to_isaaclab(orientation)], device=device
+            ).expand(num_envs, -1)
         else:
             orientations = current_orientations
 
         # Set the camera poses
-        camera.set_world_poses(positions=positions, orientations=orientations, env_ids=env_ids)
+        set_camera_world_pose(camera, env_ids, positions, orientations)
 
         if robolab.constants.VERBOSE:
             print(f"Camera '{camera_name}' pose set to position={position}, orientation={orientation}")

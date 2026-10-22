@@ -91,7 +91,7 @@ class FrankaCfg:
                 name="contact_frame",
                 offset=OffsetCfg(
                     pos=[0.0, 0.0, 0.1034],
-                    rot=[0.0, 0.0, 0.0, 1.0],
+                    rot=[0.0, 0.0, 1.0, 0.0],
                 ),
             ),
             FrameTransformerCfg.FrameCfg(
@@ -99,7 +99,7 @@ class FrankaCfg:
                 name="acronym_frame",
                 offset=OffsetCfg(
                     pos=[0.0, 0.0, 0.0],
-                    rot=[0.70711, 0.0, 0.0, -0.70711],
+                    rot=[0.0, 0.0, -0.70711, 0.70711],
                 ),
             ),
             FrameTransformerCfg.FrameCfg(

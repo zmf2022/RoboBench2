@@ -18,6 +18,7 @@ from typing import Any
 import robolab.constants
 from robolab.constants import SCENE_DIR
 from robolab.core.utils.debug_utils import get_caller_info
+from robolab.core.utils.isaaclab_compat import quat_wxyz_to_isaaclab
 
 ACCEPTED_SCENE_EXTENSIONS = (".usda", ".usdc", ".usdz", ".usd")
 
@@ -89,10 +90,8 @@ def _scrape_scene_cached(scene_path: str, objects_of_interest_tuple: tuple = Non
             usd_path=str(scene_path),
             activate_contact_sensors=True,
         ),
-        # RoboLab authors config quaternions as WXYZ.  Do not inherit Isaac
-        # Lab 3's XYZW default here: prepare_env_cfg() would convert that
-        # already-internal value a second time and rotate the scene 180 deg.
-        init_state=AssetBaseCfg.InitialStateCfg(rot=(1.0, 0.0, 0.0, 0.0)),
+        # Native XYZW identity, just like Isaac Lab's configuration defaults.
+        init_state=AssetBaseCfg.InitialStateCfg(rot=(0.0, 0.0, 0.0, 1.0)),
     )
     from robolab.core.utils.usd_utils import get_usd_objects_info
     scene_objects = get_usd_objects_info(scene_path)
@@ -134,7 +133,7 @@ def _scrape_scene_cached(scene_path: str, objects_of_interest_tuple: tuple = Non
             spawn=None,
             init_state=RigidObjectCfg.InitialStateCfg(
                 pos=obj_info['position'],
-                rot=obj_info['rotation'],
+                rot=quat_wxyz_to_isaaclab(obj_info['rotation']),
                 lin_vel=(0.0, 0.0, 0.0),
                 ang_vel=(0.0, 0.0, 0.0),
             ),
